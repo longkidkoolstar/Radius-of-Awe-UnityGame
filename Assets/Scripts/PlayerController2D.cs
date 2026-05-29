@@ -11,24 +11,29 @@ public class PlayerController2D : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 8f;
-    [SerializeField] private float acceleration = 60f;
-    [SerializeField] private float deceleration = 50f;
-    [SerializeField] private float airAcceleration = 30f;
-    [SerializeField] private float airDeceleration = 20f;
+    [SerializeField] private float acceleration = 95f;
+    [SerializeField] private float deceleration = 85f;
+    [SerializeField] private float airAcceleration = 55f;
+    [SerializeField] private float airDeceleration = 45f;
 
     [Header("Jumping")]
-    [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private float jumpForce = 11.5f;
     [SerializeField] private float coyoteTime = 0.12f;
     [SerializeField] private float jumpBufferTime = 0.15f;
     [SerializeField] private float jumpCutMultiplier = 0.4f;
-    [SerializeField] private float fallGravityMultiplier = 1.8f;
+    [SerializeField] private float fallGravityMultiplier = 2.4f;
     [SerializeField] private float maxFallSpeed = 25f;
 
     [Header("Ground Detection")]
     [SerializeField] private LayerMask groundLayer;
-    [SerializeField] private float groundCheckDistance = 0.1f;
-    [SerializeField] private Vector2 groundCheckSize = new Vector2(0.8f, 0.05f);
+    [SerializeField] private Vector2 groundCheckSize = new Vector2(0.4f, 0.05f);
     [SerializeField] private Transform groundCheckPoint;
+
+    [Header("Visual Juice")]
+    [Tooltip("Reference to the player's graphics child Transform used for squash & stretch.")]
+    [SerializeField] private Transform graphicsTransform;
+    [Tooltip("How quickly squash & stretch shapes return to normal.")]
+    [SerializeField] private float squashStretchSpeed = 12f;
 
     // Internal state
     private Rigidbody2D rb;
@@ -41,6 +46,10 @@ public class PlayerController2D : MonoBehaviour
     private bool jumpInputReleased;
     private float defaultGravityScale;
     private bool facingRight = true;
+
+    // Visual juice state
+    private Vector3 currentScale = new Vector3(0.5f, 0.5f, 1f);
+    private Vector3 defaultScale = new Vector3(0.5f, 0.5f, 1f);
 
     /// <summary>True when the character is on the ground.</summary>
     public bool IsGrounded => isGrounded;
@@ -58,6 +67,18 @@ public class PlayerController2D : MonoBehaviour
         rb.freezeRotation = true;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+        // Auto-find child named "Graphics" if not manually assigned
+        if (graphicsTransform == null)
+        {
+            graphicsTransform = transform.Find("Graphics");
+        }
+
+        if (graphicsTransform != null)
+        {
+            defaultScale = graphicsTransform.localScale;
+            currentScale = defaultScale;
+        }
     }
 
     private void Update()
@@ -92,6 +113,9 @@ public class PlayerController2D : MonoBehaviour
         {
             Flip();
         }
+
+        // --- Update visual squash and stretch ---
+        UpdateScaleJuice();
     }
 
     private void FixedUpdate()
@@ -129,6 +153,7 @@ public class PlayerController2D : MonoBehaviour
             checkPos = (Vector2)transform.position + capsuleCollider.offset + Vector2.down * (capsuleCollider.size.y * 0.5f);
         }
 
+        bool wasGrounded = isGrounded;
         isGrounded = Physics2D.OverlapBox(
             checkPos,
             groundCheckSize,
@@ -139,6 +164,13 @@ public class PlayerController2D : MonoBehaviour
         if (isGrounded)
         {
             lastGroundedTime = coyoteTime;
+            
+            // If just landed!
+            if (!wasGrounded)
+            {
+                OnLand();
+            }
+            
             isJumping = false;
         }
     }
@@ -183,6 +215,12 @@ public class PlayerController2D : MonoBehaviour
             // Reset timers to prevent double-jumps
             lastJumpInputTime = 0;
             lastGroundedTime = 0;
+
+            // Stretch the player capsule vertically!
+            if (graphicsTransform != null)
+            {
+                currentScale = new Vector3(defaultScale.x * 0.65f, defaultScale.y * 1.35f, defaultScale.z);
+            }
         }
 
         // Variable jump height: cut velocity when button is released early
@@ -218,6 +256,61 @@ public class PlayerController2D : MonoBehaviour
         Vector3 scale = transform.localScale;
         scale.x *= -1;
         transform.localScale = scale;
+    }
+
+    /// <summary>
+    /// Triggered when the player changes from airborne to grounded state.
+    /// Applies a horizontal squish to the visuals based on impact velocity.
+    /// </summary>
+    private void OnLand()
+    {
+        float fallVelocity = Mathf.Abs(rb.velocity.y);
+        
+        // Only squish if we were falling with some velocity
+        if (fallVelocity > 1f)
+        {
+            // Calculate a squish factor (max out at 40% of original size)
+            float squishFactor = Mathf.Clamp(fallVelocity * 0.018f, 0.05f, 0.4f);
+            currentScale = new Vector3(defaultScale.x * (1f + squishFactor), defaultScale.y * (1f - squishFactor), defaultScale.z);
+        }
+
+        // Trigger camera landing shake if it was a hard fall
+        if (fallVelocity > 12f && CameraController2D.Instance != null)
+        {
+            CameraController2D.Instance.TriggerShake(0.18f, fallVelocity * 0.022f);
+        }
+    }
+
+    /// <summary>
+    /// Smoothly lerps the visual scale back to default or updates mid-air stretching.
+    /// </summary>
+    private void UpdateScaleJuice()
+    {
+        if (graphicsTransform == null) return;
+
+        if (!isGrounded)
+        {
+            // Mid-air visual stretching based on current vertical velocity
+            float velY = rb.velocity.y;
+            // Stretch when rising, compress/neutral when falling
+            float stretchFactor = Mathf.Clamp(velY * 0.008f, -0.1f, 0.18f);
+            
+            Vector3 airTargetScale = new Vector3(
+                defaultScale.x * (1f - stretchFactor),
+                defaultScale.y * (1f + stretchFactor),
+                defaultScale.z
+            );
+            
+            // Lerp slower in the air for floatier feels
+            currentScale = Vector3.Lerp(currentScale, airTargetScale, Time.deltaTime * squashStretchSpeed * 0.5f);
+        }
+        else
+        {
+            // Grounded: lerp back to default scale using spring speed
+            currentScale = Vector3.Lerp(currentScale, defaultScale, Time.deltaTime * squashStretchSpeed);
+        }
+
+        graphicsTransform.localScale = currentScale;
     }
 
     /// <summary>
