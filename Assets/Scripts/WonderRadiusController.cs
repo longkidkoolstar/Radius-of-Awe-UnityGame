@@ -35,7 +35,7 @@ public class WonderRadiusController : MonoBehaviour
     [Header("Toggle")]
     [Tooltip("Allow the player to toggle the Wonder Radius on/off.")]
     [SerializeField] private bool allowToggle = true;
-    [SerializeField] private KeyCode toggleKey = KeyCode.Space;
+    [SerializeField] private KeyCode toggleKey = KeyCode.E;
 
     // Shader property IDs (cached for performance)
     private static readonly int WonderCenterID = Shader.PropertyToID("_WonderCenter");
