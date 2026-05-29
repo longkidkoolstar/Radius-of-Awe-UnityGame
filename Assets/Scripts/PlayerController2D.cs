@@ -17,11 +17,12 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float airDeceleration = 45f;
 
     [Header("Jumping")]
-    [SerializeField] private float jumpForce = 11.5f;
+    [SerializeField] private float jumpForce = 12.2f;
+    [SerializeField] private float gravityScale = 3.5f;
     [SerializeField] private float coyoteTime = 0.12f;
     [SerializeField] private float jumpBufferTime = 0.15f;
     [SerializeField] private float jumpCutMultiplier = 0.4f;
-    [SerializeField] private float fallGravityMultiplier = 2.4f;
+    [SerializeField] private float fallGravityMultiplier = 2.2f;
     [SerializeField] private float maxFallSpeed = 25f;
 
     [Header("Ground Detection")]
@@ -33,7 +34,13 @@ public class PlayerController2D : MonoBehaviour
     [Tooltip("Reference to the player's graphics child Transform used for squash & stretch.")]
     [SerializeField] private Transform graphicsTransform;
     [Tooltip("How quickly squash & stretch shapes return to normal.")]
-    [SerializeField] private float squashStretchSpeed = 12f;
+    [SerializeField] private float squashStretchSpeed = 7.5f;
+    [Tooltip("How much the player leans forward when running.")]
+    [SerializeField] private float runLeanMultiplier = 1.4f;
+    [Tooltip("Amount of vertical step-bobbing when running.")]
+    [SerializeField] private float runBobAmount = 0.05f;
+    [Tooltip("Speed of running step bobbing.")]
+    [SerializeField] private float runBobSpeed = 18f;
 
     // Internal state
     private Rigidbody2D rb;
@@ -61,7 +68,10 @@ public class PlayerController2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         capsuleCollider = GetComponent<CapsuleCollider2D>();
-        defaultGravityScale = rb.gravityScale;
+        
+        // Enforce the tight gravity settings
+        rb.gravityScale = gravityScale;
+        defaultGravityScale = gravityScale;
 
         // Freeze rotation so the character doesn't topple over
         rb.freezeRotation = true;
@@ -97,11 +107,6 @@ public class PlayerController2D : MonoBehaviour
         if (Input.GetButtonDown("Jump"))
         {
             lastJumpInputTime = jumpBufferTime;
-        }
-
-        if (Input.GetButtonUp("Jump"))
-        {
-            jumpInputReleased = true;
         }
 
         // --- Flip Sprite ---
@@ -182,7 +187,6 @@ public class PlayerController2D : MonoBehaviour
     private void ApplyMovement()
     {
         float targetSpeed = moveInput * moveSpeed;
-        float speedDiff = targetSpeed - rb.velocity.x;
 
         float accelRate;
         if (isGrounded)
@@ -194,8 +198,9 @@ public class PlayerController2D : MonoBehaviour
             accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airAcceleration : airDeceleration;
         }
 
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
-        rb.AddForce(Vector2.right * movement, ForceMode2D.Force);
+        // Celeste-style Mathf.MoveTowards horizontal velocity adjustment
+        float newX = Mathf.MoveTowards(rb.velocity.x, targetSpeed, accelRate * Time.fixedDeltaTime);
+        rb.velocity = new Vector2(newX, rb.velocity.y);
     }
 
     /// <summary>
@@ -210,7 +215,6 @@ public class PlayerController2D : MonoBehaviour
             // Perform jump
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
             isJumping = true;
-            jumpInputReleased = false;
 
             // Reset timers to prevent double-jumps
             lastJumpInputTime = 0;
@@ -223,11 +227,11 @@ public class PlayerController2D : MonoBehaviour
             }
         }
 
-        // Variable jump height: cut velocity when button is released early
-        if (jumpInputReleased && isJumping && rb.velocity.y > 0)
+        // Variable jump height: cut velocity when button is released early (continuous check)
+        if (isJumping && rb.velocity.y > 0 && !Input.GetButton("Jump"))
         {
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * jumpCutMultiplier);
-            jumpInputReleased = false;
+            isJumping = false; // Prevent multiple cuts in the same jump
         }
     }
 
@@ -269,25 +273,36 @@ public class PlayerController2D : MonoBehaviour
         // Only squish if we were falling with some velocity
         if (fallVelocity > 1f)
         {
-            // Calculate a squish factor (max out at 40% of original size)
-            float squishFactor = Mathf.Clamp(fallVelocity * 0.018f, 0.05f, 0.4f);
+            // Softened: Calculate a squish factor (max out at 22% of original size)
+            float squishFactor = Mathf.Clamp(fallVelocity * 0.012f, 0.04f, 0.22f);
             currentScale = new Vector3(defaultScale.x * (1f + squishFactor), defaultScale.y * (1f - squishFactor), defaultScale.z);
         }
 
-        // Trigger camera landing shake if it was a hard fall
-        if (fallVelocity > 12f && CameraController2D.Instance != null)
+        // Trigger camera landing shake ONLY if it was a high, heavy fall (threshold raised from 12 to 17)
+        if (fallVelocity > 17f && CameraController2D.Instance != null)
         {
             CameraController2D.Instance.TriggerShake(0.18f, fallVelocity * 0.022f);
         }
     }
 
     /// <summary>
-    /// Smoothly lerps the visual scale back to default or updates mid-air stretching.
+    /// Smoothly lerps the visual scale and rotation back to default or updates mid-air stretching/running tilt.
     /// </summary>
     private void UpdateScaleJuice()
     {
         if (graphicsTransform == null) return;
 
+        // --- 1. Running Tilt / Lean ---
+        float targetAngle = 0f;
+        if (rb != null)
+        {
+            // Lean forward based on horizontal velocity (direction of travel)
+            targetAngle = -rb.velocity.x * runLeanMultiplier;
+        }
+        // Smoothly interpolate tilt rotation
+        graphicsTransform.localRotation = Quaternion.Lerp(graphicsTransform.localRotation, Quaternion.Euler(0f, 0f, targetAngle), Time.deltaTime * 10f);
+
+        // --- 2. Squash and Stretch & Running Step-Bobbing ---
         if (!isGrounded)
         {
             // Mid-air visual stretching based on current vertical velocity
@@ -306,8 +321,23 @@ public class PlayerController2D : MonoBehaviour
         }
         else
         {
-            // Grounded: lerp back to default scale using spring speed
-            currentScale = Vector3.Lerp(currentScale, defaultScale, Time.deltaTime * squashStretchSpeed);
+            // Grounded running step-bob (breathe steps dynamically based on speed)
+            float bob = 0f;
+            float hVel = Mathf.Abs(rb.velocity.x);
+            if (hVel > 0.15f)
+            {
+                // Bob dynamically based on speed
+                bob = Mathf.Sin(Time.time * runBobSpeed) * runBobAmount * (hVel / moveSpeed);
+            }
+
+            Vector3 groundedTargetScale = new Vector3(
+                defaultScale.x * (1f + bob * 0.5f), // Stretch slightly wide when squished down
+                defaultScale.y * (1f - bob),        // Bob height
+                defaultScale.z
+            );
+
+            // Grounded: lerp back using rubbery spring speed
+            currentScale = Vector3.Lerp(currentScale, groundedTargetScale, Time.deltaTime * squashStretchSpeed);
         }
 
         graphicsTransform.localScale = currentScale;

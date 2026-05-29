@@ -12,9 +12,9 @@ public class WonderUpdraft : MonoBehaviour
 {
     [Header("Updraft Lift Physics")]
     [Tooltip("Amount of upward force to apply to Rigidbody2D objects inside the tunnel.")]
-    [SerializeField] private float upwardForce = 16f;
+    [SerializeField] private float upwardForce = 65f;
     [Tooltip("Maximum velocity a Rigidbody2D can reach while being lifted (keeps it stable).")]
-    [SerializeField] private float maxLiftVelocity = 5.5f;
+    [SerializeField] private float maxLiftVelocity = 6.5f;
 
     [Header("Bioluminescent Flow Visuals")]
     [Tooltip("Number of procedural wind lines inside the draft.")]
