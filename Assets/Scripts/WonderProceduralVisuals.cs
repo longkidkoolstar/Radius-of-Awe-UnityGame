@@ -66,7 +66,6 @@ public class WonderProceduralVisuals : MonoBehaviour
             GameObject enhancerObj = new GameObject("WonderWorldEnhancer");
             enhancerObj.AddComponent<WonderWorldEnhancer>();
         }
-
         // Find player
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)

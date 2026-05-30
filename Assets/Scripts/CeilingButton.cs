@@ -44,6 +44,9 @@ public class CeilingButton : MonoBehaviour
     /// <summary>Returns true if the pressure plate is currently pressed.</summary>
     public bool IsPressed => isPressed;
 
+    public UnityEvent OnPressed => onPressed;
+    public UnityEvent OnReleased => onReleased;
+
     private void Start()
     {
         triggerCollider = GetComponent<BoxCollider2D>();
