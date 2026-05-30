@@ -38,6 +38,9 @@ public class CeilingButton : MonoBehaviour
     private int overlappingObjectsCount = 0;
     private bool isPressed = false;
 
+    private Sprite baseSprite;
+    private Sprite capSprite;
+
     /// <summary>Returns true if the pressure plate is currently pressed.</summary>
     public bool IsPressed => isPressed;
 
@@ -50,15 +53,40 @@ public class CeilingButton : MonoBehaviour
         if (movingCap == null) movingCap = transform.Find("Cap");
         if (movingCap == null) movingCap = transform;
 
+        // Reset scale of moving cap to ensure non-distorted pixel-perfect ratio (1.6 units by 0.3 units)
+        if (movingCap != null)
+        {
+            movingCap.localScale = Vector3.one;
+        }
+
         releasedLocalPos = movingCap.localPosition;
         pressedLocalPos = releasedLocalPos + new Vector3(0f, pressDepth, 0f); // Compress upward along local Y
 
         capRenderer = movingCap.GetComponent<SpriteRenderer>();
         if (capRenderer == null) capRenderer = GetComponentInChildren<SpriteRenderer>();
-        
+
+        // Generate procedural textures and sprites
+        GenerateProceduralSprites();
+
         if (capRenderer != null)
         {
+            capRenderer.sprite = capSprite;
             capRenderer.color = normalColor;
+        }
+
+        // Spawn/configure static Base mount if it doesn't exist
+        Transform baseTrans = transform.Find("Base");
+        if (baseTrans == null)
+        {
+            GameObject baseObj = new GameObject("Base");
+            baseObj.transform.SetParent(this.transform, false);
+            // Place slightly behind the cap and flat against the ceiling
+            baseObj.transform.localPosition = new Vector3(0f, 0.1f, 0.1f);
+            baseObj.transform.localScale = Vector3.one;
+
+            var baseSr = baseObj.AddComponent<SpriteRenderer>();
+            baseSr.sprite = baseSprite;
+            baseSr.sortingOrder = (capRenderer != null) ? capRenderer.sortingOrder - 1 : 1;
         }
     }
 
@@ -129,5 +157,133 @@ public class CeilingButton : MonoBehaviour
             isPressed = false;
             onReleased?.Invoke();
         }
+    }
+
+    /// <summary>
+    /// Programmatically generates a gorgeous mechanical casing Base mount
+    /// and a hazard-striped heavy pressure plate Cap with a central light bar.
+    /// </summary>
+    private void GenerateProceduralSprites()
+    {
+        // 1. Generate static Base Mount Sprite (fits wider 2.4 units)
+        int baseWidth = 192;
+        int baseHeight = 16;
+        float ppu = 80f;
+        Texture2D baseTex = new Texture2D(baseWidth, baseHeight);
+        baseTex.filterMode = FilterMode.Bilinear;
+        baseTex.wrapMode = TextureWrapMode.Clamp;
+
+        Color baseMetal = new Color(0.18f, 0.2f, 0.23f, 1f);
+        Color baseBezel = new Color(0.12f, 0.13f, 0.15f, 1f);
+        Color baseShadow = new Color(0.08f, 0.09f, 0.1f, 1f);
+        Color baseRivet = new Color(0.6f, 0.65f, 0.7f, 1f);
+
+        for (int y = 0; y < baseHeight; y++)
+        {
+            for (int x = 0; x < baseWidth; x++)
+            {
+                // Socket slot in the middle (recessed groove)
+                bool inSocket = (x >= 32 && x < 160 && y < 12);
+                bool isBorder = (x < 3 || x >= baseWidth - 3 || y >= baseHeight - 3);
+
+                // Rivets on the edges
+                bool isLeftRivet = (Mathf.Abs(x - 12) < 2f && Mathf.Abs(y - 8) < 2f);
+                bool isRightRivet = (Mathf.Abs(x - 180) < 2f && Mathf.Abs(y - 8) < 2f);
+
+                if (isLeftRivet || isRightRivet)
+                {
+                    baseTex.SetPixel(x, y, baseRivet);
+                }
+                else if (inSocket)
+                {
+                    baseTex.SetPixel(x, y, baseShadow);
+                }
+                else if (isBorder)
+                {
+                    baseTex.SetPixel(x, y, baseBezel);
+                }
+                else
+                {
+                    baseTex.SetPixel(x, y, baseMetal);
+                }
+            }
+        }
+        baseTex.Apply();
+        baseSprite = Sprite.Create(baseTex, new Rect(0, 0, baseWidth, baseHeight), new Vector2(0.5f, 0.5f), ppu);
+
+        // 2. Generate button Cap Sprite with hazard stripes and crystal bar
+        int capWidth = 128;
+        int capHeight = 24;
+        Texture2D capTex = new Texture2D(capWidth, capHeight);
+        capTex.filterMode = FilterMode.Bilinear;
+        capTex.wrapMode = TextureWrapMode.Clamp;
+
+        Color capMetal = new Color(0.35f, 0.38f, 0.42f, 1f);
+        Color capBezel = new Color(0.2f, 0.22f, 0.24f, 1f);
+        Color capHighlight = new Color(0.55f, 0.58f, 0.62f, 1f);
+        Color hazardYellow = new Color(0.85f, 0.68f, 0.08f, 1f);
+        Color hazardBlack = new Color(0.08f, 0.09f, 0.1f, 1f);
+        Color glassBackground = new Color(0.12f, 0.13f, 0.15f, 1f);
+
+        for (int y = 0; y < capHeight; y++)
+        {
+            for (int x = 0; x < capWidth; x++)
+            {
+                // Bevel check
+                bool isBorder = (x < 3 || x >= capWidth - 3 || y < 3 || y >= capHeight - 3);
+                bool isTopHighlight = (y >= capHeight - 2 && x >= 3 && x < capWidth - 3);
+
+                // Hazard Slopes (left and right edges)
+                bool inLeftHazard = (x >= 4 && x < 28 && y >= 3 && y < capHeight - 3);
+                bool inRightHazard = (x >= 100 && x < 124 && y >= 3 && y < capHeight - 3);
+
+                // Center Emissive Glass Bar
+                bool inGlassSocket = (x >= 36 && x < 92 && y >= 4 && y < capHeight - 4);
+                bool inGlassBar = (x >= 40 && x < 88 && y >= 6 && y < capHeight - 6);
+
+                if (inGlassBar)
+                {
+                    // Frosted white glass with a glint highlight at top
+                    if (y == capHeight - 7)
+                    {
+                        capTex.SetPixel(x, y, new Color(1f, 1f, 1f, 0.95f));
+                    }
+                    else
+                    {
+                        capTex.SetPixel(x, y, new Color(0.85f, 0.9f, 0.95f, 0.8f));
+                    }
+                }
+                else if (inGlassSocket)
+                {
+                    capTex.SetPixel(x, y, glassBackground);
+                }
+                else if (inLeftHazard || inRightHazard)
+                {
+                    // Yellow and black warning stripes at 45 degrees
+                    if ((x + y) % 10 < 5)
+                    {
+                        capTex.SetPixel(x, y, hazardYellow);
+                    }
+                    else
+                    {
+                        capTex.SetPixel(x, y, hazardBlack);
+                    }
+                }
+                else if (isTopHighlight)
+                {
+                    capTex.SetPixel(x, y, capHighlight);
+                }
+                else if (isBorder)
+                {
+                    capTex.SetPixel(x, y, capBezel);
+                }
+                else
+                {
+                    capTex.SetPixel(x, y, capMetal);
+                }
+            }
+        }
+        capTex.Apply();
+        capSprite = Sprite.Create(capTex, new Rect(0, 0, capWidth, capHeight), new Vector2(0.5f, 0.5f), ppu);
     }
 }

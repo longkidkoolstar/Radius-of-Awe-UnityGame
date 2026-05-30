@@ -47,6 +47,8 @@ public class WonderObjectJuice : MonoBehaviour
     // Generated assets
     private Sprite glowSprite;
     private Sprite proceduralRuneSprite;
+    private Sprite mundaneHoverboardSprite;
+    private Sprite wonderHoverboardSprite;
 
     private void Start()
     {
@@ -94,6 +96,19 @@ public class WonderObjectJuice : MonoBehaviour
         }
 
         originalGraphicsPos = graphicsChild.localPosition;
+
+        // Check if this object is the hoverboard and generate dynamic sprites
+        bool isHoverboard = GetComponent<RideableFloaty>() != null;
+        if (isHoverboard)
+        {
+            GenerateHoverboardSprites();
+            if (graphicsRenderer != null)
+            {
+                graphicsRenderer.sprite = mundaneHoverboardSprite;
+                graphicsRenderer.color = Color.white;
+            }
+            customWonderSprite = wonderHoverboardSprite;
+        }
 
         // Cache mundane visuals
         if (graphicsRenderer != null)
@@ -262,5 +277,253 @@ public class WonderObjectJuice : MonoBehaviour
                 glowRenderer.color = Color.Lerp(glowRenderer.color, Color.clear, Time.deltaTime * 8f);
             }
         }
+    }
+
+    /// <summary>
+    /// Generates high-fidelity mechanical slate and cyber-runic hoverboard textures.
+    /// Perfectly maps pixel aspect ratios to the actual BoxCollider2D bounds!
+    /// </summary>
+    private void GenerateHoverboardSprites()
+    {
+        Vector2 colSize = new Vector2(2.4f, 0.4f);
+        var boxCol = GetComponent<BoxCollider2D>();
+        if (boxCol != null)
+        {
+            colSize = boxCol.size;
+        }
+
+        float ppu = 100f;
+        int width = Mathf.Max(32, Mathf.RoundToInt(colSize.x * ppu));
+        int height = Mathf.Max(16, Mathf.RoundToInt(colSize.y * ppu));
+
+        // 1. Generate Mundane Hoverboard Sprite
+        Texture2D mundaneTex = new Texture2D(width, height);
+        mundaneTex.filterMode = FilterMode.Bilinear;
+        mundaneTex.wrapMode = TextureWrapMode.Clamp;
+
+        // Slate metallic slate
+        Color baseGrey = new Color(0.28f, 0.31f, 0.35f, 1f);
+        // Dark industrial steel bezel
+        Color borderDark = new Color(0.16f, 0.18f, 0.2f, 1f);
+        // Light metallic highlight
+        Color borderLight = new Color(0.48f, 0.52f, 0.58f, 1f);
+        // Black/charcoal grip pad
+        Color gripColor = new Color(0.12f, 0.13f, 0.15f, 1f);
+        // Deep shadow/groove
+        Color mechanicalDark = new Color(0.08f, 0.09f, 0.1f, 1f);
+        // Inactive glass red bumper
+        Color bumperOff = new Color(0.45f, 0.1f, 0.1f, 1f);
+        // Exhaust nozzle
+        Color thrusterMetal = new Color(0.2f, 0.22f, 0.25f, 1f);
+
+        float cornerRadius = Mathf.Min(8f, height * 0.25f);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                // Corner rounding check
+                if (IsOutsideRoundedCorners(x, y, width, height, cornerRadius))
+                {
+                    mundaneTex.SetPixel(x, y, Color.clear);
+                    continue;
+                }
+
+                // Check if in borders
+                bool isBorder = (x < 4 || x >= width - 4 || y < 4 || y >= height - 4);
+                bool isTopHighlight = (y >= height - 2 && x >= 4 && x < width - 4);
+                bool isBottomShadow = (y < 2 && x >= 4 && x < width - 4);
+
+                // Grip traction pads: Left and Right sections
+                bool inLeftPad = (x >= width * 0.12f && x < width * 0.42f && y >= 6 && y < height - 6);
+                bool inRightPad = (x >= width * 0.58f && x < width * 0.88f && y >= 6 && y < height - 6);
+
+                // Inactive bumper lights: Left end and Right end (centered vertically)
+                float leftBumperDist = Vector2.Distance(new Vector2(x, y), new Vector2(10f, height * 0.5f));
+                float rightBumperDist = Vector2.Distance(new Vector2(x, y), new Vector2(width - 10f, height * 0.5f));
+                bool isBumper = (leftBumperDist < 3.5f || rightBumperDist < 3.5f);
+
+                // Thruster nozzles at bottom
+                bool inLeftThruster = (x >= width * 0.25f - 8 && x < width * 0.25f + 8 && y < 3);
+                bool inRightThruster = (x >= width * 0.75f - 8 && x < width * 0.75f + 8 && y < 3);
+
+                // Vertical mechanical panel cuts
+                bool isPanelLine = (Mathf.Abs(x - width * 0.5f) <= 0.5f || Mathf.Abs(x - width * 0.08f) <= 0.5f || Mathf.Abs(x - width * 0.92f) <= 0.5f);
+
+                // Corner rivets (screws)
+                bool isRivet = false;
+                if (!isBorder)
+                {
+                    if ((Mathf.Abs(x - 16) < 1.5f || Mathf.Abs(x - (width - 16)) < 1.5f) &&
+                        (Mathf.Abs(y - 8) < 1.5f || Mathf.Abs(y - (height - 8)) < 1.5f))
+                    {
+                        isRivet = true;
+                    }
+                }
+
+                // Apply paint logic
+                if (isBumper)
+                {
+                    mundaneTex.SetPixel(x, y, bumperOff);
+                }
+                else if (inLeftThruster || inRightThruster)
+                {
+                    mundaneTex.SetPixel(x, y, thrusterMetal);
+                }
+                else if (isRivet)
+                {
+                    mundaneTex.SetPixel(x, y, Color.white * 0.75f);
+                }
+                else if (isPanelLine)
+                {
+                    mundaneTex.SetPixel(x, y, mechanicalDark);
+                }
+                else if (inLeftPad || inRightPad)
+                {
+                    // Draw grip tape with noise pattern for rich texture
+                    float noise = Random.value * 0.08f;
+                    Color finalGrip = gripColor + new Color(noise, noise, noise, 0f);
+                    // Add mechanical traction lines
+                    if (x % 6 == 0 || y % 6 == 0) finalGrip = mechanicalDark;
+                    mundaneTex.SetPixel(x, y, finalGrip);
+                }
+                else if (isTopHighlight)
+                {
+                    mundaneTex.SetPixel(x, y, borderLight);
+                }
+                else if (isBottomShadow)
+                {
+                    mundaneTex.SetPixel(x, y, borderDark);
+                }
+                else if (isBorder)
+                {
+                    mundaneTex.SetPixel(x, y, borderDark);
+                }
+                else
+                {
+                    mundaneTex.SetPixel(x, y, baseGrey);
+                }
+            }
+        }
+        mundaneTex.Apply();
+        mundaneHoverboardSprite = Sprite.Create(mundaneTex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), ppu);
+
+        // 2. Generate Wonder Hoverboard Sprite
+        Texture2D wonderTex = new Texture2D(width, height);
+        wonderTex.filterMode = FilterMode.Bilinear;
+        wonderTex.wrapMode = TextureWrapMode.Clamp;
+
+        // Wonder Colors
+        Color cyberBase = new Color(0.06f, 0.08f, 0.15f, 1f); // Deep space dark metal
+        Color neonCyan = new Color(0f, 0.85f, 1f, 1f); // Glowing cyber cyan
+        Color neonMagenta = new Color(1f, 0.15f, 0.75f, 1f); // Glowing cyber pink
+        Color glowCore = new Color(0.3f, 0.95f, 1f, 1f); // Hot white-cyan thruster
+        Color crystalBar = new Color(0.1f, 0.12f, 0.2f, 1f);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (IsOutsideRoundedCorners(x, y, width, height, cornerRadius))
+                {
+                    wonderTex.SetPixel(x, y, Color.clear);
+                    continue;
+                }
+
+                // Check if in borders
+                bool isBorder = (x < 4 || x >= width - 4 || y < 4 || y >= height - 4);
+                bool inLeftPad = (x >= width * 0.12f && x < width * 0.42f && y >= 6 && y < height - 6);
+                bool inRightPad = (x >= width * 0.58f && x < width * 0.88f && y >= 6 && y < height - 6);
+
+                // Active glowing bumper lights: Left end and Right end
+                float leftBumperDist = Vector2.Distance(new Vector2(x, y), new Vector2(10f, height * 0.5f));
+                float rightBumperDist = Vector2.Distance(new Vector2(x, y), new Vector2(width - 10f, height * 0.5f));
+                bool isBumper = (leftBumperDist < 3.5f || rightBumperDist < 3.5f);
+
+                // Active glowing thrusters
+                bool inLeftThruster = (x >= width * 0.25f - 8 && x < width * 0.25f + 8 && y < 4);
+                bool inRightThruster = (x >= width * 0.75f - 8 && x < width * 0.75f + 8 && y < 4);
+                bool inThrusterFlame = ((x >= width * 0.25f - 5 && x < width * 0.25f + 5 && y < 2) ||
+                                       (x >= width * 0.75f - 5 && x < width * 0.75f + 5 && y < 2));
+
+                // Neon circuits/rune lines running through the board
+                bool isCircuitLine = (Mathf.Abs(y - height * 0.5f) <= 0.8f && x >= 12 && x < width - 12);
+                // Diagonal rune patterns on the grip pads
+                bool isRunePattern = false;
+                if (inLeftPad)
+                {
+                    float lx = x - width * 0.12f;
+                    float ly = y - 6;
+                    if (Mathf.Abs(lx - ly * 3.5f) < 1f || Mathf.Abs((width * 0.3f - lx) - ly * 3.5f) < 1f)
+                    {
+                        isRunePattern = true;
+                    }
+                }
+                if (inRightPad)
+                {
+                    float rx = x - width * 0.58f;
+                    float ry = y - 6;
+                    if (Mathf.Abs(rx - ry * 3.5f) < 1f || Mathf.Abs((width * 0.3f - rx) - ry * 3.5f) < 1f)
+                    {
+                        isRunePattern = true;
+                    }
+                }
+
+                // Paint logic
+                if (isBumper)
+                {
+                    wonderTex.SetPixel(x, y, neonMagenta);
+                }
+                else if (inThrusterFlame)
+                {
+                    wonderTex.SetPixel(x, y, glowCore);
+                }
+                else if (inLeftThruster || inRightThruster)
+                {
+                    wonderTex.SetPixel(x, y, neonCyan);
+                }
+                else if (isCircuitLine || isRunePattern)
+                {
+                    wonderTex.SetPixel(x, y, neonCyan);
+                }
+                else if (inLeftPad || inRightPad)
+                {
+                    // Dark cyber crystal texture with custom noise
+                    float noise = Random.value * 0.05f;
+                    wonderTex.SetPixel(x, y, crystalBar + new Color(0f, noise, noise * 1.5f, 0f));
+                }
+                else if (isBorder)
+                {
+                    wonderTex.SetPixel(x, y, Color.Lerp(neonCyan, cyberBase, 0.3f));
+                }
+                else
+                {
+                    wonderTex.SetPixel(x, y, cyberBase);
+                }
+            }
+        }
+        wonderTex.Apply();
+        wonderHoverboardSprite = Sprite.Create(wonderTex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), ppu);
+    }
+
+    private bool IsOutsideRoundedCorners(int x, int y, int width, int height, float r)
+    {
+        if (x < r && y >= height - r)
+        {
+            if (Vector2.Distance(new Vector2(x, y), new Vector2(r, height - r)) > r) return true;
+        }
+        if (x < r && y < r)
+        {
+            if (Vector2.Distance(new Vector2(x, y), new Vector2(r, r)) > r) return true;
+        }
+        if (x >= width - r && y >= height - r)
+        {
+            if (Vector2.Distance(new Vector2(x, y), new Vector2(width - r, height - r)) > r) return true;
+        }
+        if (x >= width - r && y < r)
+        {
+            if (Vector2.Distance(new Vector2(x, y), new Vector2(width - r, r)) > r) return true;
+        }
+        return false;
     }
 }

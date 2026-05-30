@@ -60,6 +60,13 @@ public class WonderProceduralVisuals : MonoBehaviour
 
     private void Start()
     {
+        // Automatically spawn WonderWorldEnhancer at runtime if not present
+        if (FindFirstObjectByType<WonderWorldEnhancer>() == null)
+        {
+            GameObject enhancerObj = new GameObject("WonderWorldEnhancer");
+            enhancerObj.AddComponent<WonderWorldEnhancer>();
+        }
+
         // Find player
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
