@@ -14,7 +14,7 @@ public class WonderWorldEnhancer : MonoBehaviour
 
     [Header("Flora Spawn Density")]
     [Tooltip("Probability of a plant spawning at each platform interval.")]
-    [SerializeField] private float spawnChance = 0.7f;
+    [SerializeField] private float spawnChance = 0.35f;
     [SerializeField] private float windSwayRange = 12f;
 
     // Generated assets
