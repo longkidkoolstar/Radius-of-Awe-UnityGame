@@ -23,6 +23,7 @@ public class WonderWorldEnhancer : MonoBehaviour
     private Sprite fernSprite;
     private Sprite mushroomSprite;
     private Sprite flowerSprite;
+    private Sprite wonderFloorSprite;
 
     private Material wonderMaskMaterial;
     
@@ -109,30 +110,67 @@ public class WonderWorldEnhancer : MonoBehaviour
 
         Color spaceVoid = new Color(0.04f, 0.03f, 0.08f, 1f);
 
+        // Pre-defined bright glowing stars with radial falloff
+        Vector2[] brightStarPositions = new Vector2[]
+        {
+            new Vector2(bgSize * 0.2f, bgSize * 0.3f),
+            new Vector2(bgSize * 0.8f, bgSize * 0.25f),
+            new Vector2(bgSize * 0.45f, bgSize * 0.75f),
+            new Vector2(bgSize * 0.65f, bgSize * 0.55f),
+            new Vector2(bgSize * 0.15f, bgSize * 0.85f)
+        };
+        Color[] brightStarColors = new Color[]
+        {
+            new Color(1.0f, 0.95f, 0.85f, 1f), // Warm White
+            new Color(0.4f, 0.9f, 1.0f, 1f),   // Electric Cyan
+            new Color(1.0f, 0.6f, 0.9f, 1f),   // Rose Magenta
+            new Color(0.85f, 0.8f, 1.0f, 1f),  // Soft Violet
+            new Color(1.0f, 0.9f, 0.5f, 1f)    // Bright Gold
+        };
+
         for (int y = 0; y < bgSize; y++)
         {
             for (int x = 0; x < bgSize; x++)
             {
-                // Procedural Nebula Gas Cloud
+                // Procedural Nebula Gas Cloud with three-color palette (Purple, Magenta, Cyan)
                 float d1 = Vector2.Distance(new Vector2(x, y), new Vector2(bgSize * 0.35f, bgSize * 0.4f)) / bgSize;
                 float d2 = Vector2.Distance(new Vector2(x, y), new Vector2(bgSize * 0.7f, bgSize * 0.75f)) / bgSize;
+                float d3 = Vector2.Distance(new Vector2(x, y), new Vector2(bgSize * 0.5f, bgSize * 0.2f)) / bgSize;
 
                 float nebulaPurple = Mathf.Clamp01(1f - d1 * 1.8f);
                 float nebulaMagenta = Mathf.Clamp01(1f - d2 * 2.2f);
+                float nebulaCyan = Mathf.Clamp01(1f - d3 * 2.4f);
 
-                Color gas = new Color(0.12f * nebulaPurple, 0.05f * nebulaMagenta, 0.22f * nebulaPurple, 0f);
+                Color gas = new Color(0.12f * nebulaPurple + 0.02f * nebulaCyan, 0.05f * nebulaMagenta, 0.22f * nebulaPurple + 0.16f * nebulaCyan, 0f);
                 Color pixelColor = spaceVoid + gas;
 
-                // Tiled Stars (White and Cyan)
+                // Add soft radial bloom stars
+                for (int s = 0; s < brightStarPositions.Length; s++)
+                {
+                    float distToStar = Vector2.Distance(new Vector2(x, y), brightStarPositions[s]);
+                    // Exponential falloff for soft star glow
+                    float bloom = Mathf.Exp(-distToStar * 0.45f); // tight core
+                    float wideGlow = Mathf.Exp(-distToStar * 0.15f) * 0.15f; // broad halo
+                    
+                    pixelColor += brightStarColors[s] * (bloom + wideGlow);
+                }
+
+                // Tiled Pinpoint Stars (White and Cyan)
                 float starChance = Random.value;
                 if (starChance > 0.996f)
                 {
-                    pixelColor = new Color(1f, 1f, 1f, Random.Range(0.6f, 1.0f));
+                    pixelColor += new Color(1f, 1f, 1f, Random.Range(0.6f, 1.0f));
                 }
                 else if (starChance > 0.993f)
                 {
-                    pixelColor = new Color(0.1f, 0.8f, 1.0f, Random.Range(0.4f, 0.8f));
+                    pixelColor += new Color(0.1f, 0.8f, 1.0f, Random.Range(0.4f, 0.8f));
                 }
+
+                // Clamp color to avoid HDR blowout
+                pixelColor.r = Mathf.Clamp01(pixelColor.r);
+                pixelColor.g = Mathf.Clamp01(pixelColor.g);
+                pixelColor.b = Mathf.Clamp01(pixelColor.b);
+                pixelColor.a = 1f;
 
                 wonderTex.SetPixel(x, y, pixelColor);
             }
@@ -301,6 +339,75 @@ public class WonderWorldEnhancer : MonoBehaviour
         }
         flowerTex.Apply();
         flowerSprite = Sprite.Create(flowerTex, new Rect(0, 0, flw, flh), new Vector2(0.5f, 0.0f), 32f);
+
+        // --- D. Generate Bioluminescent Crystalline Floor Sprite (32x32) ---
+        int flrw = 32, flrh = 32;
+        Texture2D wonderFloorTex = new Texture2D(flrw, flrh);
+        wonderFloorTex.filterMode = FilterMode.Bilinear;
+        wonderFloorTex.wrapMode = TextureWrapMode.Repeat; // Repeat wrap mode for seamless tiling
+
+        Color crystalBase = new Color(0.06f, 0.03f, 0.12f, 1f); // Deep Cosmic Obsidian
+        Color veinCyan = new Color(0.0f, 0.85f, 1.0f, 1f);      // Glowing Cyan Veins
+        Color veinCenter = new Color(0.8f, 0.95f, 1.0f, 1f);    // Super bright core
+        Color neonPink = new Color(0.9f, 0.15f, 0.6f, 1f);      // Vibrant Magenta Base
+        Color neonCyan = new Color(0.0f, 1.0f, 0.9f, 1f);       // Bioluminescent Greenish Cyan
+
+        for (int y = 0; y < flrh; y++)
+        {
+            for (int x = 0; x < flrw; x++)
+            {
+                // Top wavy moss boundary (horizontal seamless wave)
+                float wave = Mathf.Sin(x * (Mathf.PI * 2f / 32f)) * 1.5f + Mathf.Sin(x * (Mathf.PI * 4f / 32f)) * 0.5f;
+                float mossBoundary = 25f + wave;
+
+                if (y >= mossBoundary)
+                {
+                    // Moss/Turf Layer
+                    float tipFactor = (float)(y - 23) / 9f;
+                    Color mossColor = Color.Lerp(neonPink, neonCyan, tipFactor);
+                    
+                    // Add extra bright highlights near the top
+                    if (y >= 29)
+                    {
+                        mossColor = Color.Lerp(mossColor, Color.white, 0.35f);
+                    }
+                    
+                    wonderFloorTex.SetPixel(x, y, mossColor);
+                }
+                else
+                {
+                    // Bedrock Layer
+                    Color basePixel = crystalBase;
+
+                    // Periodic diagonal crystal veins for seamless horizontal tiling
+                    float vein1 = Mathf.Sin((x + y) * (Mathf.PI * 2f / 32f));
+                    float vein2 = Mathf.Sin((x - y + 32) * (Mathf.PI * 2f / 32f));
+
+                    // Check if we are inside a vein line
+                    if (Mathf.Abs(vein1) > 0.94f || Mathf.Abs(vein2) > 0.94f)
+                    {
+                        basePixel = Color.Lerp(crystalBase, veinCyan, 0.85f);
+                        if (Mathf.Abs(vein1) > 0.98f || Mathf.Abs(vein2) > 0.98f)
+                        {
+                            basePixel = veinCenter;
+                        }
+                    }
+                    else
+                    {
+                        // Add some soft star dust/amethyst sparkles
+                        float noise = (float)(x * 73 + y * 97) % 100f / 100f; // Stable pseudo-random
+                        if (noise > 0.98f)
+                        {
+                            basePixel += new Color(0.25f, 0.05f, 0.35f, 0f); // amethyst sparkle
+                        }
+                    }
+
+                    wonderFloorTex.SetPixel(x, y, basePixel);
+                }
+            }
+        }
+        wonderFloorTex.Apply();
+        wonderFloorSprite = Sprite.Create(wonderFloorTex, new Rect(0, 0, flrw, flrh), new Vector2(0.5f, 0.5f), 32f);
     }
 
     private void SetupBackgroundPlanes()
@@ -354,6 +461,9 @@ public class WonderWorldEnhancer : MonoBehaviour
             if (col.isTrigger || col.size.x < 1.0f)
                 continue;
 
+            // --- Spawn Wonder Floor Overlay ---
+            SpawnWonderFloorOverlay(col.gameObject);
+
             Vector2 center = col.bounds.center;
             Vector2 size = col.bounds.size;
 
@@ -372,6 +482,35 @@ public class WonderWorldEnhancer : MonoBehaviour
                 currentX += Random.Range(0.7f, 1.3f);
             }
         }
+    }
+
+    /// <summary>
+    /// Spawns a child GameObject containing a tile-aligned glowing crystal-moss
+    /// SpriteRenderer overlay that is revealed only inside the active Wonder Radius!
+    /// </summary>
+    private void SpawnWonderFloorOverlay(GameObject platformObj)
+    {
+        SpriteRenderer parentSr = platformObj.GetComponent<SpriteRenderer>();
+        if (parentSr == null) return;
+
+        // Create overlay child GameObject
+        GameObject overlayObj = new GameObject("WonderFloorOverlay");
+        overlayObj.transform.SetParent(platformObj.transform, false);
+        overlayObj.transform.localPosition = Vector3.zero;
+        overlayObj.transform.localRotation = Quaternion.identity;
+        overlayObj.transform.localScale = Vector3.one;
+
+        SpriteRenderer overlaySr = overlayObj.AddComponent<SpriteRenderer>();
+        overlaySr.sprite = wonderFloorSprite;
+        overlaySr.material = wonderMaskMaterial; // Reveal ONLY inside active Wonder Radius!
+        overlaySr.drawMode = parentSr.drawMode;
+        overlaySr.size = parentSr.size;
+        overlaySr.tileMode = parentSr.tileMode;
+        
+        // Render exactly on top of the parent floor but behind plants
+        overlaySr.sortingLayerName = parentSr.sortingLayerName;
+        overlaySr.sortingLayerID = parentSr.sortingLayerID;
+        overlaySr.sortingOrder = parentSr.sortingOrder + 1;
     }
 
     private void SpawnPlantItem(float x, float y)
