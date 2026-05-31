@@ -32,6 +32,10 @@ public class VictoryPortalTrigger : MonoBehaviour
     [Tooltip("Expansion speed of the global Wonder Radius wave.")]
     [SerializeField] private float warpExpansionSpeed = 65f;
 
+    [Header("Next Scene Settings")]
+    [Tooltip("Specific scene to load upon victory. If empty, loads the next scene in Build Settings.")]
+    [SerializeField] private string nextSceneName = "";
+
     private bool triggered = false;
     private Vector3 baseScale;
     private Vector3 basePosition;
@@ -251,7 +255,7 @@ public class VictoryPortalTrigger : MonoBehaviour
         GameObject textObj = new GameObject("DriftText");
         textObj.transform.SetParent(canvasObj.transform, false);
         var uiText = textObj.AddComponent<UnityEngine.UI.Text>();
-        uiText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        uiText.font = GetSafeBuiltinFont();
         uiText.text = "D R I F T I N G   I N T O   W O N D E R";
         uiText.alignment = TextAnchor.MiddleCenter;
         uiText.fontSize = 24;
@@ -427,7 +431,7 @@ public class VictoryPortalTrigger : MonoBehaviour
         GameObject resultTextObj = new GameObject("ResultText");
         resultTextObj.transform.SetParent(canvasObj.transform, false);
         var resultText = resultTextObj.AddComponent<UnityEngine.UI.Text>();
-        resultText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        resultText.font = GetSafeBuiltinFont();
         resultText.text = "A W E   A C H I E V E D .\n\n<size=15>The universe is now in perfect harmony.</size>";
         resultText.alignment = TextAnchor.MiddleCenter;
         resultText.fontSize = 28;
@@ -448,9 +452,15 @@ public class VictoryPortalTrigger : MonoBehaviour
         }
         resultText.color = new Color(0.0f, 0.85f, 1.0f, 1f);
 
+        // Pause to let the player absorb the "AWE ACHIEVED" message
+        yield return new WaitForSecondsRealtime(2.5f);
+
         // Suspend player object and restore standard timeScale for engine safety
         playerTrans.gameObject.SetActive(false);
         Time.timeScale = 1.0f;
+
+        // Load next level / scene
+        LoadNextScene();
     }
 
     /// <summary>
@@ -498,6 +508,60 @@ public class VictoryPortalTrigger : MonoBehaviour
 
             yield return new WaitForSecondsRealtime(spawnInterval);
         }
+    }
+
+    private void LoadNextScene()
+    {
+        // Check if a specific next scene name is provided
+        if (!string.IsNullOrEmpty(nextSceneName))
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
+        }
+        else
+        {
+            // Otherwise, load next scene in build index
+            int nextSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex + 1;
+            if (nextSceneIndex < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings)
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneIndex);
+            }
+            else
+            {
+                // Fallback: Reload the current scene if no other scene is available in Build Settings
+                Debug.LogWarning("<b><color=orange>[PORTAL]</color></b>: No next scene available in Build Settings! Reloading current scene.");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            }
+        }
+    }
+
+    private Font GetSafeBuiltinFont()
+    {
+        Font font = null;
+        try
+        {
+            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+        catch {}
+
+        if (font == null)
+        {
+            try
+            {
+                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            }
+            catch {}
+        }
+
+        if (font == null)
+        {
+            Font[] loadedFonts = Resources.FindObjectsOfTypeAll<Font>();
+            if (loadedFonts != null && loadedFonts.Length > 0)
+            {
+                font = loadedFonts[0];
+            }
+        }
+
+        return font;
     }
 }
 
