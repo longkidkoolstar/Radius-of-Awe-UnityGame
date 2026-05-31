@@ -27,6 +27,7 @@ public class WonderUpdraft : MonoBehaviour
     private BoxCollider2D triggerCollider;
     private bool isActiveInWonder = false;
     private List<Rigidbody2D> rigidbodiesInRange = new List<Rigidbody2D>();
+    private AudioSource windLoopSource;
 
     // Visual pool
     private List<Transform> flowLines = new List<Transform>();
@@ -104,7 +105,25 @@ public class WonderUpdraft : MonoBehaviour
     private void Update()
     {
         // Query the static API using the updraft's center
+        bool wasActive = isActiveInWonder;
         isActiveInWonder = WonderRadiusController.IsInsideWonderZone(transform.position);
+
+        // Wind loop transition
+        if (isActiveInWonder && !wasActive)
+        {
+            if (windLoopSource == null)
+            {
+                windLoopSource = AudioManager.PlayLoopAtPoint(AudioManager.Instance.updraftClip, transform.position, 0.4f);
+            }
+        }
+        else if (!isActiveInWonder && wasActive)
+        {
+            if (windLoopSource != null)
+            {
+                AudioManager.StopLoop(windLoopSource, 0.25f);
+                windLoopSource = null;
+            }
+        }
 
         // Animate wind lines
         Vector2 size = triggerCollider.size;
@@ -173,6 +192,15 @@ public class WonderUpdraft : MonoBehaviour
         if (rb != null && rigidbodiesInRange.Contains(rb))
         {
             rigidbodiesInRange.Remove(rb);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (windLoopSource != null)
+        {
+            AudioManager.StopLoop(windLoopSource, 0.15f);
+            windLoopSource = null;
         }
     }
 }

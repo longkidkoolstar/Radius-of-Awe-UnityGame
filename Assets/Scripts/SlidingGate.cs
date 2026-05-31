@@ -53,6 +53,9 @@ public class SlidingGate : MonoBehaviour
             CameraController2D.Instance.TriggerShake(shakeIntensity, shakeDuration);
         }
 
+        // Start looping grinding slide sound
+        AudioSource slideSource = AudioManager.PlayLoopAtPoint(AudioManager.Instance.gateSlideClip, transform.position, 0.55f);
+
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
@@ -63,6 +66,12 @@ public class SlidingGate : MonoBehaviour
         }
 
         transform.localPosition = endPos;
+
+        // Stop grinding sound smoothly
+        AudioManager.StopLoop(slideSource, 0.12f);
+
+        // Play metallic locking slam sound
+        AudioManager.PlayGateLock(transform.position);
 
         // Trigger a hard metallic structural jiggle shudder
         if (gateWobbler != null)

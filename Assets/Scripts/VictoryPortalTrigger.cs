@@ -45,6 +45,7 @@ public class VictoryPortalTrigger : MonoBehaviour
     // Procedural assets generated at runtime
     private Sprite radialGlowSprite;
     private List<GameObject> activeParticles = new List<GameObject>();
+    private AudioSource portalHumSource;
 
     private void Start()
     {
@@ -201,6 +202,10 @@ public class VictoryPortalTrigger : MonoBehaviour
             {
                 CameraController2D.Instance.TriggerShake(0.8f, 0.35f);
             }
+
+            // Play drift entry sound and start portal cosmic loop hum
+            AudioManager.PlayDriftStart(transform.position);
+            portalHumSource = AudioManager.PlayLoopAtPoint(AudioManager.Instance.portalLoopClip, transform.position, 0.8f);
 
             // 4. Begin the majestic drift coroutine
             StartCoroutine(DimensionalDriftRoutine(collision.transform));
@@ -388,6 +393,13 @@ public class VictoryPortalTrigger : MonoBehaviour
         }
 
         // --- STEP 5: FINAL FADE TO COSMIC VOID ---
+        // Stop looping cosmic portal hum smoothly
+        if (portalHumSource != null)
+        {
+            AudioManager.StopLoop(portalHumSource, 1.2f);
+            portalHumSource = null;
+        }
+
         GameObject fadePanelObj = new GameObject("FadePanel");
         fadePanelObj.transform.SetParent(canvasObj.transform, false);
         var fadeImage = fadePanelObj.AddComponent<UnityEngine.UI.Image>();
@@ -409,6 +421,9 @@ public class VictoryPortalTrigger : MonoBehaviour
         fadeImage.color = new Color(0.04f, 0.03f, 0.08f, 1f);
 
         // --- STEP 6: ELEGANT END TEXT DISPLAY ---
+        // Play the glorious celestial major arpeggio victory chime!
+        AudioManager.PlayVictoryChime();
+
         GameObject resultTextObj = new GameObject("ResultText");
         resultTextObj.transform.SetParent(canvasObj.transform, false);
         var resultText = resultTextObj.AddComponent<UnityEngine.UI.Text>();
@@ -477,6 +492,9 @@ public class VictoryPortalTrigger : MonoBehaviour
             spore.swayAmount = Random.Range(0.6f, 1.4f);
             spore.lifetime = 3.5f; // Automatically cleans up after crossing screen
             spore.useUnscaledTime = true; // Rushes past in real-time, unaffected by slow-mo!
+
+            // Play spatialized wind-whoosh sound for spore rushing past the screen
+            AudioManager.PlaySporeWhoosh(spawnPos);
 
             yield return new WaitForSecondsRealtime(spawnInterval);
         }

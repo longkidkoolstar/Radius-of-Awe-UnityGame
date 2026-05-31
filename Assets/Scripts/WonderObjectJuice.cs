@@ -43,6 +43,7 @@ public class WonderObjectJuice : MonoBehaviour
     private Vector3 originalGraphicsPos;
     private Sprite mundaneSprite;
     private Color mundaneColor;
+    private bool wasInside = false;
 
     // Generated assets
     private Sprite glowSprite;
@@ -123,6 +124,11 @@ public class WonderObjectJuice : MonoBehaviour
         if (enableGlow)
         {
             SetupGlowOutline();
+        }
+
+        if (wonderObject != null)
+        {
+            wasInside = wonderObject.IsInWonderZone;
         }
     }
 
@@ -220,6 +226,18 @@ public class WonderObjectJuice : MonoBehaviour
         if (wonderObject == null) return;
 
         bool inside = wonderObject.IsInWonderZone;
+
+        // Transition SFX triggers
+        if (inside && !wasInside)
+        {
+            AudioManager.PlayWonderObjectEnter(transform.position);
+        }
+        else if (!inside && wasInside)
+        {
+            // Play a soft thud/deactivate sound
+            AudioManager.PlayButtonRelease(transform.position);
+        }
+        wasInside = inside;
 
         // --- 1. Weightless Drifting/Bobbing ---
         if (enableBobbing && graphicsChild != null)

@@ -168,6 +168,9 @@ public class CeilingButton : MonoBehaviour
             {
                 CameraController2D.Instance.TriggerShake(0.12f, 0.08f);
             }
+
+            // Play procedural spatialized button press sound
+            AudioManager.PlayButtonPress(transform.position);
         }
         else if (!shouldBePressed && isPressed)
         {
@@ -179,6 +182,9 @@ public class CeilingButton : MonoBehaviour
             {
                 capWobbler.TriggerWobble(new Vector3(-0.18f, 0.22f, 0f), 15f, 4.5f);
             }
+
+            // Play procedural spatialized button release sound
+            AudioManager.PlayButtonRelease(transform.position);
         }
     }
 

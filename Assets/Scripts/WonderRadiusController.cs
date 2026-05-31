@@ -153,6 +153,14 @@ public class WonderRadiusController : MonoBehaviour
         if (allowToggle && (Input.GetKeyDown(toggleKey) || Input.GetKeyDown(controllerToggleKey)))
         {
             isActive = !isActive;
+            if (isActive)
+            {
+                AudioManager.PlayWonderToggleOn();
+            }
+            else
+            {
+                AudioManager.PlayWonderToggleOff();
+            }
         }
 
         // Scroll wheel or Controller Triggers to resize radius

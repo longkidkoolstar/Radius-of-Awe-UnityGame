@@ -62,6 +62,7 @@ public class PlayerController2D : MonoBehaviour
     // Visual juice state
     private Vector3 currentScale = new Vector3(0.5f, 0.5f, 1f);
     private Vector3 defaultScale = new Vector3(0.5f, 0.5f, 1f);
+    private float lastBobSin = 0f;
 
     /// <summary>True when the character is on the ground.</summary>
     public bool IsGrounded => isGrounded;
@@ -249,6 +250,9 @@ public class PlayerController2D : MonoBehaviour
             {
                 juiceEffects.EmitJumpBurst();
             }
+
+            // Play procedural jump sound
+            AudioManager.PlayJump();
         }
 
         // Variable jump height: cut velocity when button is released early (continuous check)
@@ -308,6 +312,12 @@ public class PlayerController2D : MonoBehaviour
             juiceEffects.EmitLandBurst(fallVelocity);
         }
 
+        // Play landing impact sound
+        if (fallVelocity > 1.2f)
+        {
+            AudioManager.PlayLand(fallVelocity);
+        }
+
         // Trigger camera landing zoom bump on heavy falls
         if (fallVelocity > 1.5f && CameraController2D.Instance != null)
         {
@@ -364,7 +374,18 @@ public class PlayerController2D : MonoBehaviour
             if (hVel > 0.15f)
             {
                 // Bob dynamically based on speed
-                bob = Mathf.Sin(Time.time * runBobSpeed) * runBobAmount * (hVel / moveSpeed);
+                float currentBobSin = Mathf.Sin(Time.time * runBobSpeed);
+                bob = currentBobSin * runBobAmount * (hVel / moveSpeed);
+
+                // Trigger footstep sound on step bob zero-crossings
+                if (isGrounded && hVel > 1.6f)
+                {
+                    if ((lastBobSin < 0f && currentBobSin >= 0f) || (lastBobSin > 0f && currentBobSin <= 0f))
+                    {
+                        AudioManager.PlayFootstep(hVel / moveSpeed);
+                    }
+                }
+                lastBobSin = currentBobSin;
             }
 
             Vector3 groundedTargetScale = new Vector3(
