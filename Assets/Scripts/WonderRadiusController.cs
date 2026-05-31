@@ -37,6 +37,19 @@ public class WonderRadiusController : MonoBehaviour
     [SerializeField] private bool allowToggle = true;
     [SerializeField] private KeyCode toggleKey = KeyCode.E;
 
+    [Header("Controller Mappings")]
+    [Tooltip("Controller button to toggle the Wonder Radius (Xbox X, PS Square, etc.).")]
+    [SerializeField] private KeyCode controllerToggleKey = KeyCode.JoystickButton2;
+    [Tooltip("Maximum offset distance the Right Stick can push the radius center.")]
+    [SerializeField] private float controllerAimOffsetRange = 5f;
+    [Tooltip("How quickly the radius offset responds to Right Stick inputs.")]
+    [SerializeField] private float controllerAimSmoothSpeed = 10f;
+
+    // Controller Aiming States
+    private Vector3 currentAimOffset = Vector3.zero;
+    private Vector3 virtualCursorPos;
+
+
     // Shader property IDs (cached for performance)
     private static readonly int WonderCenterID = Shader.PropertyToID("_WonderCenter");
     private static readonly int WonderRadiusID = Shader.PropertyToID("_WonderRadius");
@@ -110,6 +123,7 @@ public class WonderRadiusController : MonoBehaviour
         instance = this;
         mainCamera = Camera.main;
         currentRadius = radius;
+        virtualCursorPos = transform.position;
     }
 
     private void OnDestroy()
@@ -135,19 +149,49 @@ public class WonderRadiusController : MonoBehaviour
     /// </summary>
     private void HandleInput()
     {
-        // Toggle on/off
-        if (allowToggle && Input.GetKeyDown(toggleKey))
+        // Toggle on/off (keyboard or controller button)
+        if (allowToggle && (Input.GetKeyDown(toggleKey) || Input.GetKeyDown(controllerToggleKey)))
         {
             isActive = !isActive;
         }
 
-        // Scroll wheel to resize radius
+        // Scroll wheel or Controller Triggers to resize radius
         if (allowScrollResize && isActive)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
+
+            // Continuous trigger axis sizing (analog trigger values go from 0 to 1)
+            float controllerSizeDelta = 0f;
+            float lt = 0f;
+            float rt = 0f;
+            try
+            {
+                lt = Input.GetAxis("LeftTrigger");
+                rt = Input.GetAxis("RightTrigger");
+            }
+            catch (System.ArgumentException)
+            {
+                // Fallback in case axes are somehow not set up in InputManager
+            }
+
+            // Clamping deadzone at 0.1 to avoid stick drift / initial trigger offsets
+            if (lt > 0.1f)
+            {
+                controllerSizeDelta -= lt * radiusChangeSpeed * Time.deltaTime;
+            }
+            if (rt > 0.1f)
+            {
+                controllerSizeDelta += rt * radiusChangeSpeed * Time.deltaTime;
+            }
+
             if (Mathf.Abs(scroll) > 0.01f)
             {
                 radius += scroll * radiusChangeSpeed;
+                radius = Mathf.Clamp(radius, minRadius, maxRadius);
+            }
+            else if (Mathf.Abs(controllerSizeDelta) > 0.001f)
+            {
+                radius += controllerSizeDelta;
                 radius = Mathf.Clamp(radius, minRadius, maxRadius);
             }
         }
@@ -160,18 +204,65 @@ public class WonderRadiusController : MonoBehaviour
     {
         if (isDrifting) return; // Freeze position during dimensional drift
 
+        // Attempt to read Right Stick input for analog aiming
+        float rx = 0f;
+        float ry = 0f;
+        try
+        {
+            rx = Input.GetAxis("RightStickX");
+            ry = Input.GetAxis("RightStickY");
+        }
+        catch (System.ArgumentException)
+        {
+            // Fallback in case axes are somehow not set up in InputManager
+        }
+
         switch (mode)
         {
             case RadiusMode.FollowPlayer:
-                currentCenter = transform.position;
+                Vector3 targetOffset = Vector3.zero;
+
+                if (Mathf.Abs(rx) > 0.05f || Mathf.Abs(ry) > 0.05f)
+                {
+                    // Controller: Smoothly aim/offset using the Right Stick
+                    targetOffset = new Vector3(rx, ry, 0f) * controllerAimOffsetRange;
+                }
+                else if (mainCamera != null)
+                {
+                    // KBM: Tethered Aim Pull - Mouse pulls the radius in its direction, clamped to the range
+                    Vector3 mouseWorld = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+                    mouseWorld.z = 0f;
+                    Vector3 playerToMouse = mouseWorld - transform.position;
+                    targetOffset = Vector3.ClampMagnitude(playerToMouse, controllerAimOffsetRange);
+                }
+
+                currentAimOffset = Vector3.Lerp(currentAimOffset, targetOffset, Time.deltaTime * controllerAimSmoothSpeed);
+                currentCenter = transform.position + currentAimOffset;
                 break;
 
             case RadiusMode.FollowMouse:
                 if (mainCamera != null)
                 {
-                    Vector3 mouseWorld = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-                    mouseWorld.z = 0f;
-                    currentCenter = mouseWorld;
+                    // Check if Right Stick is actively aiming
+                    if (Mathf.Abs(rx) > 0.05f || Mathf.Abs(ry) > 0.05f)
+                    {
+                        // Move a virtual world-space cursor via the stick
+                        virtualCursorPos += new Vector3(rx, ry, 0f) * (radiusChangeSpeed * 6f) * Time.deltaTime;
+                        currentCenter = virtualCursorPos;
+                    }
+                    else if (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.01f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.01f)
+                    {
+                        // Active mouse movement overrides the virtual cursor
+                        Vector3 mouseWorld = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+                        mouseWorld.z = 0f;
+                        virtualCursorPos = mouseWorld;
+                        currentCenter = mouseWorld;
+                    }
+                    else
+                    {
+                        // If no active input, keep current center
+                        currentCenter = virtualCursorPos;
+                    }
                 }
                 break;
         }

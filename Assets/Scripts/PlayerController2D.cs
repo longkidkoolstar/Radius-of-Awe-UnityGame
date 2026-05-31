@@ -24,6 +24,9 @@ public class PlayerController2D : MonoBehaviour
     [SerializeField] private float jumpCutMultiplier = 0.4f;
     [SerializeField] private float fallGravityMultiplier = 2.2f;
     [SerializeField] private float maxFallSpeed = 25f;
+    [Tooltip("Secondary jump key for standard gamepads (Xbox A, PS Cross, etc.).")]
+    [SerializeField] private KeyCode controllerJumpKey = KeyCode.JoystickButton0;
+
 
     [Header("Ground Detection")]
     [SerializeField] private LayerMask groundLayer;
@@ -113,7 +116,7 @@ public class PlayerController2D : MonoBehaviour
         CheckGrounded();
 
         // --- Jump Input ---
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") || Input.GetKeyDown(controllerJumpKey))
         {
             lastJumpInputTime = jumpBufferTime;
         }
@@ -249,7 +252,7 @@ public class PlayerController2D : MonoBehaviour
         }
 
         // Variable jump height: cut velocity when button is released early (continuous check)
-        if (isJumping && rb.velocity.y > 0 && !Input.GetButton("Jump"))
+        if (isJumping && rb.velocity.y > 0 && !Input.GetButton("Jump") && !Input.GetKey(controllerJumpKey))
         {
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * jumpCutMultiplier);
             isJumping = false; // Prevent multiple cuts in the same jump
