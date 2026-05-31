@@ -81,6 +81,19 @@ public class WonderObjectJuice : MonoBehaviour
                 graphicsRenderer.material = rootSr.material;
                 graphicsRenderer.sortingOrder = rootSr.sortingOrder;
                 
+                // Stretches tiled/sliced elements via scale to bypass Unity runtime tiling mesh bugs
+                if (rootSr.drawMode == SpriteDrawMode.Tiled || rootSr.drawMode == SpriteDrawMode.Sliced)
+                {
+                    go.transform.localScale = new Vector3(rootSr.size.x, rootSr.size.y, 1f);
+                    graphicsRenderer.drawMode = SpriteDrawMode.Simple;
+                }
+                else
+                {
+                    graphicsRenderer.drawMode = rootSr.drawMode;
+                    graphicsRenderer.size = rootSr.size;
+                    graphicsRenderer.tileMode = rootSr.tileMode;
+                }
+                
                 // Destroy root SpriteRenderer to keep physics clean
                 Destroy(rootSr);
             }
@@ -190,7 +203,7 @@ public class WonderObjectJuice : MonoBehaviour
         glowObj.transform.SetParent(graphicsChild, false);
         glowObj.transform.localPosition = new Vector3(0f, 0f, 0.05f);
 
-        // Match local scale based on parent bounds
+        // Match local scale based on parent bounds (inherited from parent transform scale if tiled/sliced)
         if (graphicsRenderer != null && graphicsRenderer.sprite != null)
         {
             float boundsWidth = graphicsRenderer.sprite.bounds.size.x;

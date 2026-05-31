@@ -29,13 +29,27 @@ public class LevelIntroManager : MonoBehaviour
     private PlayerController2D playerController;
 
     /// <summary>
-    /// Programmatically auto-instantiates and triggers the level intro at the start of every loaded level!
+    /// Programmatically subscribes to scene load events to auto-instantiate and trigger the level intro at the start of every loaded level!
     /// Eliminates manual editor setup or dragging components into scenes.
     /// </summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AutoStartIntro()
+    private static void InitializeIntroSystem()
     {
-        // Don't spawn if the AudioManager or Player is not present (e.g. core setups aren't loaded)
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        TriggerIntroForActiveScene();
+    }
+
+    private static void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        TriggerIntroForActiveScene();
+    }
+
+    private static void TriggerIntroForActiveScene()
+    {
+        // Don't spawn if there's already a LevelIntroManager active in the scene
+        if (GameObject.FindObjectOfType<LevelIntroManager>() != null) return;
+
+        // Don't spawn if the Player is not present (e.g. core setups aren't loaded)
         if (GameObject.FindGameObjectWithTag("Player") == null) return;
 
         GameObject go = new GameObject("LevelIntroManager");
@@ -142,7 +156,12 @@ public class LevelIntroManager : MonoBehaviour
 
         // Determine scene and display texts
         string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (sceneName == "SampleScene")
+        if (sceneName == "Level00")
+        {
+            titleText.text = "T U T O R I A L";
+            subtitleText.text = "T h e   A w a k e n i n g";
+        }
+        else if (sceneName == "Level01")
         {
             titleText.text = "L E V E L   O N E";
             subtitleText.text = "T h e   P o r t a l   A s c e n t";
