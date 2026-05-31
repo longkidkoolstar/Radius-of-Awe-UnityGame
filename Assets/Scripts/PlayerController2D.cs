@@ -58,6 +58,7 @@ public class PlayerController2D : MonoBehaviour
     private bool facingRight = true;
     private PlayerJuiceEffects juiceEffects;
     private float lastNonGroundedVelocityY;
+    private Vector2 spawnPoint;
 
     // Visual juice state
     private Vector3 currentScale = new Vector3(0.5f, 0.5f, 1f);
@@ -102,6 +103,8 @@ public class PlayerController2D : MonoBehaviour
             defaultScale = graphicsTransform.localScale;
             currentScale = defaultScale;
         }
+
+        spawnPoint = transform.position;
     }
 
     private void Update()
@@ -111,6 +114,12 @@ public class PlayerController2D : MonoBehaviour
         {
             Time.timeScale = 1.0f;
             UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        }
+
+        // --- Hazard/Death Check (Falling off the map) ---
+        if (transform.position.y < -7f)
+        {
+            DieAndRespawn();
         }
 
         // --- Gather Input ---
@@ -429,5 +438,37 @@ public class PlayerController2D : MonoBehaviour
 
         Gizmos.color = isGrounded ? Color.green : Color.red;
         Gizmos.DrawWireCube(checkPos, groundCheckSize);
+    }
+
+    /// <summary>
+    /// Resets player position, velocity, triggers screenshake, and emits landing burst particles.
+    /// </summary>
+    private void DieAndRespawn()
+    {
+        transform.position = spawnPoint;
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+        }
+
+        if (CameraController2D.Instance != null)
+        {
+            CameraController2D.Instance.TriggerShake(0.35f, 0.15f);
+        }
+
+        AudioManager.PlayLand(18f);
+
+        if (juiceEffects != null)
+        {
+            juiceEffects.EmitLandBurst(12f);
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.name.Contains("Danger") || collision.gameObject.tag == "Hazard")
+        {
+            DieAndRespawn();
+        }
     }
 }
