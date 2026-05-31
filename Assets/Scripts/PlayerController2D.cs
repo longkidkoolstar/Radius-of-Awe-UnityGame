@@ -54,6 +54,7 @@ public class PlayerController2D : MonoBehaviour
     private float defaultGravityScale;
     private bool facingRight = true;
     private PlayerJuiceEffects juiceEffects;
+    private float lastNonGroundedVelocityY;
 
     // Visual juice state
     private Vector3 currentScale = new Vector3(0.5f, 0.5f, 1f);
@@ -146,6 +147,12 @@ public class PlayerController2D : MonoBehaviour
         if (rb.velocity.y < -maxFallSpeed)
         {
             rb.velocity = new Vector2(rb.velocity.x, -maxFallSpeed);
+        }
+
+        // Cache vertical velocity right before impact so we know the force of the land
+        if (!isGrounded)
+        {
+            lastNonGroundedVelocityY = rb.velocity.y;
         }
     }
 
@@ -282,7 +289,7 @@ public class PlayerController2D : MonoBehaviour
     /// </summary>
     private void OnLand()
     {
-        float fallVelocity = Mathf.Abs(rb.velocity.y);
+        float fallVelocity = Mathf.Abs(lastNonGroundedVelocityY);
         
         // Only squish if we were falling with some velocity
         if (fallVelocity > 1f)
@@ -323,7 +330,8 @@ public class PlayerController2D : MonoBehaviour
         if (rb != null)
         {
             // Lean forward based on horizontal velocity (direction of travel)
-            targetAngle = -rb.velocity.x * runLeanMultiplier;
+            // Compensate for local scale X mirroring when flipped left
+            targetAngle = -rb.velocity.x * runLeanMultiplier * (facingRight ? 1f : -1f);
         }
         // Smoothly interpolate tilt rotation
         graphicsTransform.localRotation = Quaternion.Lerp(graphicsTransform.localRotation, Quaternion.Euler(0f, 0f, targetAngle), Time.deltaTime * 10f);

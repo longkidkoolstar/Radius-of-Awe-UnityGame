@@ -36,9 +36,14 @@ public class PlayerJuiceEffects : MonoBehaviour
     
     private Sprite particleSprite;
     private Material wonderMaterial;
+    private Material mundaneMaterial;
     
     private List<JuiceParticle> particles = new List<JuiceParticle>();
     private float runDustTimer = 0f;
+
+    private TrailRenderer playerTrail;
+    private UnityEngine.Rendering.Universal.Light2D ambientLight;
+    private SpriteRenderer playerGraphicsRenderer;
 
     private void Start()
     {
@@ -57,7 +62,56 @@ public class PlayerJuiceEffects : MonoBehaviour
             wonderMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
         }
 
+        mundaneMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
+
         GenerateParticleSprite();
+        UpgradePlayerVisuals();
+    }
+
+    private void UpgradePlayerVisuals()
+    {
+        Transform graphicsObj = transform.Find("Graphics");
+        if (graphicsObj != null)
+        {
+            // 1. Upgrade Sprite Material to Lit
+            playerGraphicsRenderer = graphicsObj.GetComponent<SpriteRenderer>();
+            if (playerGraphicsRenderer != null)
+            {
+                playerGraphicsRenderer.material = mundaneMaterial;
+                playerGraphicsRenderer.color = mundaneColor;
+            }
+
+            // 2. Setup Trail Renderer
+            GameObject trailObj = new GameObject("PlayerTrail");
+            trailObj.transform.SetParent(graphicsObj, false);
+            trailObj.transform.localPosition = new Vector3(0f, -0.2f, 0f);
+            
+            playerTrail = trailObj.AddComponent<TrailRenderer>();
+            playerTrail.time = 0.25f;
+            playerTrail.startWidth = 0.6f;
+            playerTrail.endWidth = 0.0f;
+            playerTrail.material = wonderMaterial;
+            
+            Gradient trailGradient = new Gradient();
+            trailGradient.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(mundaneColor, 0.0f), new GradientColorKey(mundaneColor, 1.0f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.6f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+            );
+            playerTrail.colorGradient = trailGradient;
+            playerTrail.sortingOrder = 9;
+
+            // 3. Setup Ambient Glow Light
+            var lightObj = new GameObject("AmbientGlow");
+            lightObj.transform.SetParent(graphicsObj, false);
+            lightObj.transform.localPosition = Vector3.zero;
+
+            ambientLight = lightObj.AddComponent<UnityEngine.Rendering.Universal.Light2D>();
+            ambientLight.lightType = UnityEngine.Rendering.Universal.Light2D.LightType.Point;
+            ambientLight.pointLightInnerRadius = 1.5f;
+            ambientLight.pointLightOuterRadius = 4.5f;
+            ambientLight.intensity = 0.8f;
+            ambientLight.color = mundaneColor;
+        }
     }
 
     /// <summary>
@@ -99,6 +153,34 @@ public class PlayerJuiceEffects : MonoBehaviour
     {
         HandleRunDustEmission();
         UpdateParticles();
+        UpdateDynamicVisuals();
+    }
+
+    private void UpdateDynamicVisuals()
+    {
+        bool insideWonderNow = WonderRadiusController.IsInsideWonderZone(transform.position);
+        Color targetColor = insideWonderNow ? wonderCyan : mundaneColor;
+
+        if (playerGraphicsRenderer != null)
+        {
+            playerGraphicsRenderer.color = Color.Lerp(playerGraphicsRenderer.color, targetColor, Time.deltaTime * 5f);
+        }
+
+        if (playerTrail != null)
+        {
+            Gradient trailGradient = playerTrail.colorGradient;
+            var colorKeys = trailGradient.colorKeys;
+            colorKeys[0].color = Color.Lerp(colorKeys[0].color, targetColor, Time.deltaTime * 5f);
+            colorKeys[1].color = colorKeys[0].color;
+            trailGradient.SetKeys(colorKeys, trailGradient.alphaKeys);
+            playerTrail.colorGradient = trailGradient;
+        }
+
+        if (ambientLight != null)
+        {
+            ambientLight.color = Color.Lerp(ambientLight.color, targetColor, Time.deltaTime * 5f);
+            ambientLight.intensity = Mathf.Lerp(ambientLight.intensity, insideWonderNow ? 1.2f : 0.4f, Time.deltaTime * 5f);
+        }
     }
 
     /// <summary>
@@ -278,7 +360,7 @@ public class PlayerJuiceEffects : MonoBehaviour
             }
             else
             {
-                p.renderer.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
+                p.renderer.material = mundaneMaterial;
                 
                 if (p.isWonderSparkle)
                 {

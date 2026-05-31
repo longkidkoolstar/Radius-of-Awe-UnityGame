@@ -113,7 +113,9 @@ public class PlayerPersonality : MonoBehaviour
         if (Mathf.Abs(hVel) > 0.15f)
         {
             // Shift eyes forward in direction of travel
-            targetShift = Mathf.Clamp(hVel * lookShiftFactor, -maxLookShift, maxLookShift);
+            // Multiply by the parent's facing sign to compensate for scale.x mirroring when flipped left
+            float facingSign = Mathf.Sign(transform.lossyScale.x);
+            targetShift = Mathf.Clamp(hVel * lookShiftFactor * facingSign, -maxLookShift, maxLookShift);
         }
         
         currentLookShiftX = Mathf.Lerp(currentLookShiftX, targetShift, Time.deltaTime * 10f);
