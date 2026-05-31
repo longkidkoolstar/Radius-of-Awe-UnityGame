@@ -106,6 +106,13 @@ public class PlayerController2D : MonoBehaviour
 
     private void Update()
     {
+        // --- Restart Level Input ---
+        if (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.JoystickButton3))
+        {
+            Time.timeScale = 1.0f;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        }
+
         // --- Gather Input ---
         moveInput = Input.GetAxisRaw("Horizontal");
 
