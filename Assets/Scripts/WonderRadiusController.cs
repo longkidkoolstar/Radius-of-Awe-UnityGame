@@ -44,6 +44,27 @@ public class WonderRadiusController : MonoBehaviour
 
     // Static singleton reference for easy querying
     private static WonderRadiusController instance;
+    public static WonderRadiusController Instance => instance;
+
+    // Drift Mode state
+    private bool isDrifting = false;
+    private float driftTargetRadius;
+    private float driftExpansionSpeed;
+
+    /// <summary>Enables manual drift mode centered at a custom position with a starting radius.</summary>
+    public void EnableDriftMode(Vector3 customCenter, float startRadius)
+    {
+        isDrifting = true;
+        currentCenter = customCenter;
+        currentRadius = startRadius;
+    }
+
+    /// <summary>Sets the target drift radius and speed for smooth wave expansion.</summary>
+    public void SetDriftRadius(float targetRadius, float speed)
+    {
+        driftTargetRadius = targetRadius;
+        driftExpansionSpeed = speed;
+    }
 
     // Runtime state
     private Camera mainCamera;
@@ -137,6 +158,8 @@ public class WonderRadiusController : MonoBehaviour
     /// </summary>
     private void UpdateCenter()
     {
+        if (isDrifting) return; // Freeze position during dimensional drift
+
         switch (mode)
         {
             case RadiusMode.FollowPlayer:
@@ -160,6 +183,12 @@ public class WonderRadiusController : MonoBehaviour
     /// </summary>
     private void UpdateRadius()
     {
+        if (isDrifting)
+        {
+            currentRadius = Mathf.MoveTowards(currentRadius, driftTargetRadius, Time.deltaTime * driftExpansionSpeed);
+            return;
+        }
+
         float targetRadius = isActive ? radius : 0f;
         currentRadius = Mathf.Lerp(currentRadius, targetRadius, Time.deltaTime * radiusSmoothSpeed);
 
