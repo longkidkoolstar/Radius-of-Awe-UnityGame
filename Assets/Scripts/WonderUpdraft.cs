@@ -47,7 +47,7 @@ public class WonderUpdraft : MonoBehaviour
         }
         else
         {
-            wonderMaterial = new Material(Shader.Find("Sprites/Default"));
+            wonderMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
         }
 
         GenerateLineSprite();

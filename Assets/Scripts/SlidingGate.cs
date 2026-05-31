@@ -16,6 +16,17 @@ public class SlidingGate : MonoBehaviour
     [SerializeField] private float shakeDuration = 0.12f;
 
     private bool isOpening = false;
+    private ElasticWobble gateWobbler;
+
+    private void Start()
+    {
+        // Auto-detect or attach ElasticWobble to this gate
+        gateWobbler = GetComponent<ElasticWobble>();
+        if (gateWobbler == null)
+        {
+            gateWobbler = gameObject.AddComponent<ElasticWobble>();
+        }
+    }
 
     /// <summary>
     /// Starts the smooth slide-open animation sequence.
@@ -52,6 +63,12 @@ public class SlidingGate : MonoBehaviour
         }
 
         transform.localPosition = endPos;
+
+        // Trigger a hard metallic structural jiggle shudder
+        if (gateWobbler != null)
+        {
+            gateWobbler.TriggerWobble(new Vector3(0.05f, 0.28f, 0f), 24f, 8.0f);
+        }
         
         // Deactivate collider to allow passage completely
         var col = GetComponent<Collider2D>();

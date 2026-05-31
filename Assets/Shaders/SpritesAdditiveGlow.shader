@@ -1,25 +1,24 @@
-// Unity Shader: Sprites-WonderMask (URP 2D Compatible)
-// A custom 2D Sprite shader that reveals pixels only within the Wonder Radius.
-// Uses global shader properties _WonderCenter, _WonderRadius, and _WonderFeather
-// set by the WonderRadiusController C# script.
+// Unity Shader: Sprites-AdditiveGlow (URP 2D Compatible)
+// A custom additive-blend sprite shader for faux-2D lighting effects.
+// Renders with SrcAlpha + One blending so that bright colors ADD light
+// to whatever is behind them, creating a glowing light effect.
 //
-// URP 2D version: uses HLSL and URP ShaderLibrary instead of Built-in CG.
+// URP 2D version: uses HLSL and URP ShaderLibrary.
 
-Shader "Sprites/WonderMask"
+Shader "Sprites/AdditiveGlow"
 {
     Properties
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
         [MaterialToggle] PixelSnap ("Pixel snap", Float) = 0
-        _Feather ("Edge Feather", Range(0.01, 2.0)) = 0.5
     }
 
     SubShader
     {
         Tags
         {
-            "Queue" = "Transparent"
+            "Queue" = "Transparent+10"
             "IgnoreProjector" = "True"
             "RenderType" = "Transparent"
             "RenderPipeline" = "UniversalPipeline"
@@ -30,7 +29,8 @@ Shader "Sprites/WonderMask"
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend One OneMinusSrcAlpha
+        // Additive blending: Source * SrcAlpha + Destination * One
+        Blend SrcAlpha One
 
         Pass
         {
@@ -53,19 +53,11 @@ Shader "Sprites/WonderMask"
                 float4 vertex   : SV_POSITION;
                 half4  color    : COLOR;
                 float2 texcoord : TEXCOORD0;
-                float3 worldPos : TEXCOORD1;
             };
 
-            // Per-material properties
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
             half4 _Color;
-            float _Feather;
-
-            // Global properties (set by WonderRadiusController.cs every frame)
-            float4 _WonderCenter;   // xy = world position
-            float  _WonderRadius;   // world-space radius
-            float  _WonderFeather;  // override feather from C# (optional)
 
             v2f vert(appdata_t IN)
             {
@@ -73,7 +65,6 @@ Shader "Sprites/WonderMask"
                 OUT.vertex = TransformObjectToHClip(IN.vertex.xyz);
                 OUT.texcoord = IN.texcoord;
                 OUT.color = IN.color * _Color;
-                OUT.worldPos = TransformObjectToWorld(IN.vertex.xyz);
 
                 #ifdef PIXELSNAP_ON
                 OUT.vertex = floor(OUT.vertex * 0.5) * 2.0;
@@ -84,27 +75,9 @@ Shader "Sprites/WonderMask"
 
             half4 frag(v2f IN) : SV_Target
             {
-                // Sample the sprite texture
                 half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, IN.texcoord) * IN.color;
 
-                // Calculate world-space distance from Wonder center
-                float2 diff = IN.worldPos.xy - _WonderCenter.xy;
-                float dist = length(diff);
-
-                // Use the C#-provided feather if available, otherwise use material feather
-                float featherVal = _WonderFeather > 0 ? _WonderFeather : _Feather;
-
-                // Smooth falloff: 1 inside, 0 outside, smooth transition at edge
-                float mask = 1.0 - smoothstep(_WonderRadius - featherVal, _WonderRadius, dist);
-
-                // Apply mask to alpha
-                col.a *= mask;
-
-                // Discard fully transparent pixels to avoid blending artifacts
-                if (col.a < 0.003)
-                    discard;
-
-                // Premultiply alpha for correct sprite blending
+                // Premultiply for additive blend
                 col.rgb *= col.a;
 
                 return col;

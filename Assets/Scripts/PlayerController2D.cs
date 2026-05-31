@@ -53,6 +53,7 @@ public class PlayerController2D : MonoBehaviour
     private bool jumpInputReleased;
     private float defaultGravityScale;
     private bool facingRight = true;
+    private PlayerJuiceEffects juiceEffects;
 
     // Visual juice state
     private Vector3 currentScale = new Vector3(0.5f, 0.5f, 1f);
@@ -77,6 +78,13 @@ public class PlayerController2D : MonoBehaviour
         rb.freezeRotation = true;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+        // Auto-detect or attach PlayerJuiceEffects
+        juiceEffects = GetComponent<PlayerJuiceEffects>();
+        if (juiceEffects == null)
+        {
+            juiceEffects = gameObject.AddComponent<PlayerJuiceEffects>();
+        }
 
         // Auto-find child named "Graphics" if not manually assigned
         if (graphicsTransform == null)
@@ -225,6 +233,12 @@ public class PlayerController2D : MonoBehaviour
             {
                 currentScale = new Vector3(defaultScale.x * 0.65f, defaultScale.y * 1.35f, defaultScale.z);
             }
+
+            // Emit visual jump smoke/sparks burst
+            if (juiceEffects != null)
+            {
+                juiceEffects.EmitJumpBurst();
+            }
         }
 
         // Variable jump height: cut velocity when button is released early (continuous check)
@@ -276,6 +290,18 @@ public class PlayerController2D : MonoBehaviour
             // Softened: Calculate a squish factor (max out at 22% of original size)
             float squishFactor = Mathf.Clamp(fallVelocity * 0.012f, 0.04f, 0.22f);
             currentScale = new Vector3(defaultScale.x * (1f + squishFactor), defaultScale.y * (1f - squishFactor), defaultScale.z);
+        }
+
+        // Emit landing dust/spark ring
+        if (juiceEffects != null && fallVelocity > 1.5f)
+        {
+            juiceEffects.EmitLandBurst(fallVelocity);
+        }
+
+        // Trigger camera landing zoom bump on heavy falls
+        if (fallVelocity > 1.5f && CameraController2D.Instance != null)
+        {
+            CameraController2D.Instance.TriggerLandingZoomBump(fallVelocity);
         }
 
         // Trigger camera landing shake ONLY if it was a high, heavy fall (threshold raised from 12 to 17)

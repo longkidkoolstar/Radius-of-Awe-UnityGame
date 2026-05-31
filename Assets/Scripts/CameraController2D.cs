@@ -16,12 +16,16 @@ public class CameraController2D : MonoBehaviour
     [SerializeField] private float smoothTime = 0.18f;
     [Tooltip("Camera offset relative to the target.")]
     [SerializeField] private Vector3 offset = new Vector3(0f, 0.8f, -10f);
+    [Tooltip("Additional Y offset applied to the target tracking.")]
+    [SerializeField] private float yOffset = 0f;
 
-    [Header("Look-Ahead (Offset in Movement Direction)")]
-    [Tooltip("How far ahead the camera looks based on target's velocity.")]
-    [SerializeField] private float lookAheadDistance = 1.8f;
-    [Tooltip("How fast the camera shifts horizontally to look ahead.")]
-    [SerializeField] private float lookAheadSpeed = 2.5f;
+    public float YOffset
+    {
+        get => yOffset;
+        set => yOffset = value;
+    }
+
+
 
     [Header("Wonder Zoom Effects")]
     [Tooltip("Enable smooth zoom scaling when the Wonder Zone is activated.")]
@@ -33,8 +37,14 @@ public class CameraController2D : MonoBehaviour
     [Tooltip("Speed of the smooth orthographic camera zoom transition.")]
     [SerializeField] private float zoomSpeed = 3.5f;
 
+    [Tooltip("Speed of decay back from impact landing zoom drops.")]
+    [SerializeField] private float landingZoomRecoverySpeed = 6.2f;
+
     private Vector3 currentVelocity;
     private Camera cam;
+
+    // Camera dynamic state
+    private float currentZoomOffset = 0f;
     
     // Screenshake state variables
     private float shakeTimeRemaining;
@@ -45,7 +55,6 @@ public class CameraController2D : MonoBehaviour
     // Reality distortion tracking
     private WonderRadiusController radiusController;
     private bool wasWonderActive = true;
-    private float currentLookAheadX = 0f;
 
     private void Awake()
     {
@@ -102,37 +111,37 @@ public class CameraController2D : MonoBehaviour
             }
         }
 
+        // Decay landing zoom offset back to 0
+        currentZoomOffset = Mathf.Lerp(currentZoomOffset, 0f, Time.deltaTime * landingZoomRecoverySpeed);
+
         // --- 2. Camera Zoom Scaling ---
         if (enableZoomEffects && cam != null && radiusController != null)
         {
             float targetZoom = radiusController.IsActive ? wonderActiveZoom : defaultZoom;
+            
+            // Subtract current zoom offset (makes the camera zoom in temporarily on impact)
+            targetZoom -= currentZoomOffset;
             cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, targetZoom, Time.deltaTime * zoomSpeed);
         }
 
-        // --- 3. Look-Ahead Offset (Horizontal Shift) ---
-        float targetLookAhead = 0f;
-        var rb = target.GetComponent<Rigidbody2D>();
-        if (rb != null)
-        {
-            float hVel = rb.velocity.x;
-            if (Mathf.Abs(hVel) > 0.15f)
-            {
-                targetLookAhead = Mathf.Sign(hVel) * lookAheadDistance;
-            }
-        }
-        
-        // Smoothly interpolate the look-ahead value to prevent camera jerking
-        currentLookAheadX = Mathf.Lerp(currentLookAheadX, targetLookAhead, Time.deltaTime * lookAheadSpeed);
-
-        // --- 4. Smooth Follow Calculation ---
+        // --- 3. Smooth Follow Calculation ---
         Vector3 targetPos = target.position + offset;
-        targetPos.x += currentLookAheadX;
+        targetPos.y += yOffset;
+
+        // Dynamic smooth time vertical lag: increase smoothTime slightly during high vertical velocity
+        float activeSmoothTime = smoothTime;
+        var rb = target.GetComponent<Rigidbody2D>();
+        if (rb != null && Mathf.Abs(rb.velocity.y) > 3.0f)
+        {
+            float vLag = Mathf.Min(Mathf.Abs(rb.velocity.y) * 0.025f, 0.5f);
+            activeSmoothTime = smoothTime * (1f + vLag);
+        }
 
         // Clamp camera Z depth to original Z
-        Vector3 newPos = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, smoothTime);
+        Vector3 newPos = Vector3.SmoothDamp(transform.position, targetPos, ref currentVelocity, activeSmoothTime);
         newPos.z = offset.z;
 
-        // --- 5. Screenshake Solver ---
+        // --- 4. Screenshake Solver ---
         if (shakeTimeRemaining > 0)
         {
             shakeTimeRemaining -= Time.deltaTime;
@@ -164,5 +173,15 @@ public class CameraController2D : MonoBehaviour
         shakeTimeRemaining = duration;
         totalShakeDuration = duration;
         shakeMagnitude = magnitude;
+    }
+
+    /// <summary>
+    /// Triggers an elastic camera zoom compression bump based on the landing impact velocity.
+    /// </summary>
+    public void TriggerLandingZoomBump(float fallVelocity)
+    {
+        // Clamp zoom impact to prevent complete viewport collapse
+        float targetOffset = Mathf.Clamp(fallVelocity * 0.038f, 0.08f, 0.65f);
+        currentZoomOffset = targetOffset;
     }
 }

@@ -84,7 +84,7 @@ public class WonderProceduralVisuals : MonoBehaviour
         else
         {
             Debug.LogWarning("Sprites/WonderMask shader not found! Particles will use fallback.");
-            wonderMaterial = new Material(Shader.Find("Sprites/Default"));
+            wonderMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
         }
 
         // Generate procedural sprites

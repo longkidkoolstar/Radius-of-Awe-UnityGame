@@ -208,7 +208,7 @@ public class WonderObjectJuice : MonoBehaviour
         }
         else
         {
-            glowRenderer.material = new Material(Shader.Find("Sprites/Default"));
+            glowRenderer.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
         }
 
         glowRenderer.color = Color.clear;

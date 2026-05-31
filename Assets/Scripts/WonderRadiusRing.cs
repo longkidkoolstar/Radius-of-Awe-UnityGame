@@ -81,7 +81,7 @@ public class WonderRadiusRing : MonoBehaviour
         lineRenderer.startWidth = width;
         lineRenderer.endWidth = width;
         
-        Shader defaultSpriteShader = Shader.Find("Sprites/Default");
+        Shader defaultSpriteShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default");
         if (defaultSpriteShader != null)
         {
             lineRenderer.material = new Material(defaultSpriteShader);

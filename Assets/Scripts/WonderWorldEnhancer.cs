@@ -49,7 +49,7 @@ public class WonderWorldEnhancer : MonoBehaviour
         else
         {
             Debug.LogWarning("Sprites/WonderMask shader not found for WonderWorldEnhancer! Using fallback.");
-            wonderMaskMaterial = new Material(Shader.Find("Sprites/Default"));
+            wonderMaskMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default"));
         }
 
         // 2. Generate procedural textures & sprites

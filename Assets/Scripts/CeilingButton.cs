@@ -37,6 +37,7 @@ public class CeilingButton : MonoBehaviour
     private Vector3 pressedLocalPos;
     private int overlappingObjectsCount = 0;
     private bool isPressed = false;
+    private ElasticWobble capWobbler;
 
     private Sprite baseSprite;
     private Sprite capSprite;
@@ -56,9 +57,16 @@ public class CeilingButton : MonoBehaviour
         if (movingCap == null) movingCap = transform.Find("Cap");
         if (movingCap == null) movingCap = transform;
 
-        // Reset scale of moving cap to ensure non-distorted pixel-perfect ratio (1.6 units by 0.3 units)
+        // Auto-detect or attach ElasticWobble component to movingCap
         if (movingCap != null)
         {
+            capWobbler = movingCap.GetComponent<ElasticWobble>();
+            if (capWobbler == null)
+            {
+                capWobbler = movingCap.gameObject.AddComponent<ElasticWobble>();
+            }
+            
+            // Reset scale of moving cap to ensure non-distorted pixel-perfect ratio (1.6 units by 0.3 units)
             movingCap.localScale = Vector3.one;
         }
 
@@ -149,6 +157,12 @@ public class CeilingButton : MonoBehaviour
             isPressed = true;
             onPressed?.Invoke();
 
+            // Trigger visual squash wobble
+            if (capWobbler != null)
+            {
+                capWobbler.TriggerWobble(new Vector3(0.25f, -0.32f, 0f), 18f, 5.0f);
+            }
+
             // Give the button press some weight with a minor screenshake click
             if (CameraController2D.Instance != null)
             {
@@ -159,6 +173,12 @@ public class CeilingButton : MonoBehaviour
         {
             isPressed = false;
             onReleased?.Invoke();
+
+            // Trigger visual release recoil wobble
+            if (capWobbler != null)
+            {
+                capWobbler.TriggerWobble(new Vector3(-0.18f, 0.22f, 0f), 15f, 4.5f);
+            }
         }
     }
 
