@@ -104,9 +104,9 @@ public class WonderUpdraft : MonoBehaviour
 
     private void Update()
     {
-        // Query the static API using the updraft's center
+        // Query the static API using the updraft's trigger collider bounds
         bool wasActive = isActiveInWonder;
-        isActiveInWonder = WonderRadiusController.IsInsideWonderZone(transform.position);
+        isActiveInWonder = WonderRadiusController.IsInsideWonderZone(triggerCollider);
 
         // Wind loop transition
         if (isActiveInWonder && !wasActive)

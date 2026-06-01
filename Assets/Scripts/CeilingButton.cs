@@ -15,6 +15,12 @@ public class CeilingButton : MonoBehaviour
     [Tooltip("If true, the activating object must be currently inside the Wonder Zone (so weightless).")]
     [SerializeField] private bool requireActiveWonderZoneState = true;
 
+    [Header("Trigger Leeway")]
+    [Tooltip("Extra width added to the trigger collider at runtime to give the player more leeway.")]
+    [SerializeField] private float extraTriggerWidth = 0.4f;
+    [Tooltip("Extra height added to the trigger collider extending downwards at runtime.")]
+    [SerializeField] private float extraTriggerHeightDown = 0.3f;
+
     [Header("Procedural Visuals")]
     [Tooltip("The moving child transform representing the button cap. Auto-finds child named 'Cap' if empty.")]
     [SerializeField] private Transform movingCap;
@@ -52,6 +58,15 @@ public class CeilingButton : MonoBehaviour
     {
         triggerCollider = GetComponent<BoxCollider2D>();
         triggerCollider.isTrigger = true;
+
+        // Apply runtime leeway trigger size expansion
+        if (triggerCollider != null)
+        {
+            Vector2 size = triggerCollider.size;
+            Vector2 offset = triggerCollider.offset;
+            triggerCollider.size = new Vector2(size.x + extraTriggerWidth, size.y + extraTriggerHeightDown);
+            triggerCollider.offset = new Vector2(offset.x, offset.y - extraTriggerHeightDown * 0.5f);
+        }
 
         // Auto-detect button cap child
         if (movingCap == null) movingCap = transform.Find("Cap");

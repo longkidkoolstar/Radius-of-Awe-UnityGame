@@ -118,6 +118,10 @@ public class WonderObjectJuice : MonoBehaviour
         if (isHoverboard)
         {
             GenerateHoverboardSprites();
+            if (graphicsChild != null)
+            {
+                graphicsChild.localScale = Vector3.one;
+            }
             if (graphicsRenderer != null)
             {
                 graphicsRenderer.sprite = mundaneHoverboardSprite;
@@ -131,6 +135,10 @@ public class WonderObjectJuice : MonoBehaviour
         if (isPassableWall)
         {
             GeneratePassableWallSprites();
+            if (graphicsChild != null)
+            {
+                graphicsChild.localScale = Vector3.one;
+            }
             if (graphicsRenderer != null)
             {
                 graphicsRenderer.sprite = mundanePassableWallSprite;
@@ -569,20 +577,20 @@ public class WonderObjectJuice : MonoBehaviour
         int width = Mathf.Max(32, Mathf.RoundToInt(colSize.x * ppu));
         int height = Mathf.Max(16, Mathf.RoundToInt(colSize.y * ppu));
 
-        // 1. Generate Mundane PassableWall Sprite
+        // 1. Generate Mundane PassableWall Sprite (Industrial Heavy Chainlink Gate)
         Texture2D mundaneTex = new Texture2D(width, height);
         mundaneTex.filterMode = FilterMode.Bilinear;
         mundaneTex.wrapMode = TextureWrapMode.Clamp;
 
-        // Colors
+        // Slate/Industrial Colors
         Color borderDark = new Color(0.12f, 0.14f, 0.16f, 1f);
         Color borderLight = new Color(0.38f, 0.42f, 0.46f, 1f);
         Color baseGrey = new Color(0.24f, 0.26f, 0.28f, 1f);
-        Color metalBar = new Color(0.3f, 0.33f, 0.36f, 1f);
+        Color wireMeshColor = new Color(0.16f, 0.18f, 0.2f, 1f);
+        Color wireMeshHighlight = new Color(0.35f, 0.38f, 0.4f, 1f);
         Color rivetColor = new Color(0.7f, 0.72f, 0.75f, 1f);
         Color hazardYellow = new Color(0.85f, 0.68f, 0.08f, 1f);
         Color hazardBlack = new Color(0.08f, 0.09f, 0.1f, 1f);
-        Color shadowColor = new Color(0.05f, 0.06f, 0.07f, 1f);
 
         for (int y = 0; y < height; y++)
         {
@@ -591,47 +599,45 @@ public class WonderObjectJuice : MonoBehaviour
                 // Solid border frames on left, right, top, and bottom
                 bool isLeftFrame = (x < 6);
                 bool isRightFrame = (x >= width - 6);
-                bool isTopFrame = (y >= height - 6);
-                bool isBottomFrame = (y < 6);
+                bool isTopFrame = (y >= height - 8);
+                bool isBottomFrame = (y < 8);
                 bool isFrame = isLeftFrame || isRightFrame || isTopFrame || isBottomFrame;
 
                 bool isInner = !isFrame;
 
-                // Hazard stripes on top and bottom frames
+                // Diagonal cautionary stripes on top and bottom frame bezels
                 bool isHazardTop = isTopFrame && (x >= 6 && x < width - 6);
                 bool isHazardBottom = isBottomFrame && (x >= 6 && x < width - 6);
 
-                // Vertical metal grates in center area
-                bool inVerticalBar = false;
+                // CRISP DIAGONAL METAL CHAINLINK MESH
+                bool isChainlink = false;
+                bool isChainlinkHighlight = false;
                 if (isInner)
                 {
-                    float relativeX = (float)(x - 6) / (width - 12);
-                    if (Mathf.Abs(relativeX - 0.25f) < 0.06f || 
-                        Mathf.Abs(relativeX - 0.50f) < 0.06f || 
-                        Mathf.Abs(relativeX - 0.75f) < 0.06f)
+                    // Draw repeating diagonal diamond grid lines
+                    int gridSpacing = 16;
+                    int thickness = 2;
+                    
+                    bool line1 = Mathf.Abs((x - y) % gridSpacing) < thickness;
+                    bool line2 = Mathf.Abs((x + y) % gridSpacing) < thickness;
+                    
+                    isChainlink = line1 || line2;
+                    
+                    // Add light reflections at diagonal edges to make wire 3D
+                    if (isChainlink)
                     {
-                        inVerticalBar = true;
+                        isChainlinkHighlight = Mathf.Abs((x - y) % gridSpacing) == 0 || Mathf.Abs((x + y) % gridSpacing) == 0;
                     }
                 }
 
-                // Horizontal braces
-                bool inHorizontalBrace = false;
-                if (isInner)
-                {
-                    float relativeY = (float)y / height;
-                    if (Mathf.Abs(relativeY - 0.25f) < 0.02f ||
-                        Mathf.Abs(relativeY - 0.50f) < 0.02f ||
-                        Mathf.Abs(relativeY - 0.75f) < 0.02f)
-                    {
-                        inHorizontalBrace = true;
-                    }
-                }
+                // Support braces at 1/3 and 2/3 heights
+                bool inHorizontalBrace = isInner && (Mathf.Abs(y - height * 0.33f) < 2 || Mathf.Abs(y - height * 0.66f) < 2);
 
-                // Frame rivets
+                // Frame assembly rivets
                 bool isRivet = false;
                 if (isFrame)
                 {
-                    if ((x == 3 || x == width - 4) && (y % 40 == 20))
+                    if ((x == 3 || x == width - 4) && (y % 30 == 15))
                     {
                         isRivet = true;
                     }
@@ -644,7 +650,8 @@ public class WonderObjectJuice : MonoBehaviour
                 }
                 else if (isHazardTop || isHazardBottom)
                 {
-                    if ((x + y) % 12 < 6)
+                    // Diagonal stripes pattern matching
+                    if ((x + y) % 14 < 7)
                     {
                         mundaneTex.SetPixel(x, y, hazardYellow);
                     }
@@ -657,22 +664,19 @@ public class WonderObjectJuice : MonoBehaviour
                 {
                     mundaneTex.SetPixel(x, y, borderLight);
                 }
-                else if (inVerticalBar)
+                else if (isChainlinkHighlight)
                 {
-                    float shading = Mathf.Clamp01(1f - (x % 6) / 6f);
-                    mundaneTex.SetPixel(x, y, Color.Lerp(metalBar, shadowColor, shading * 0.4f));
+                    mundaneTex.SetPixel(x, y, wireMeshHighlight);
+                }
+                else if (isChainlink)
+                {
+                    mundaneTex.SetPixel(x, y, wireMeshColor);
                 }
                 else if (isInner)
                 {
-                    float noise = Random.value * 0.05f;
-                    if (y % 4 == 0 || x % 4 == 0)
-                    {
-                        mundaneTex.SetPixel(x, y, new Color(0.15f + noise, 0.16f, 0.17f, 0.9f));
-                    }
-                    else
-                    {
-                        mundaneTex.SetPixel(x, y, new Color(0.08f, 0.08f, 0.09f, 0.7f));
-                    }
+                    // Translucent dark opening between bars for gritted visibility
+                    float shadowNoise = Random.value * 0.03f;
+                    mundaneTex.SetPixel(x, y, new Color(0.06f + shadowNoise, 0.06f + shadowNoise, 0.08f, 0.85f));
                 }
                 else if (isLeftFrame || isRightFrame)
                 {
@@ -692,15 +696,15 @@ public class WonderObjectJuice : MonoBehaviour
         mundaneTex.Apply();
         mundanePassableWallSprite = Sprite.Create(mundaneTex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), ppu);
 
-        // 2. Generate Wonder PassableWall Sprite (Phase Gate)
+        // 2. Generate Wonder PassableWall Sprite (Glowing Holographic energy Lattice)
         Texture2D wonderTex = new Texture2D(width, height);
         wonderTex.filterMode = FilterMode.Bilinear;
         wonderTex.wrapMode = TextureWrapMode.Clamp;
 
-        Color cyberBorder = new Color(0.6f, 0.1f, 0.9f, 1f);
-        Color cyberGlow = new Color(0.8f, 0.2f, 1.0f, 1f);
-        Color energyCyan = new Color(0f, 0.85f, 1.0f, 0.4f);
-        Color energyCore = new Color(0.3f, 0.95f, 1.0f, 0.8f);
+        Color cyberBorder = new Color(0.9f, 0.15f, 0.85f, 1f); // Hot pink border
+        Color energyCyan = new Color(0f, 0.85f, 1.0f, 1f); // Glowing cyber cyan
+        Color energyCyanSoft = new Color(0f, 0.65f, 0.9f, 0.25f); // Translucent energy mist
+        Color energyNodeCore = new Color(0.8f, 0.98f, 1.0f, 1f); // Glowing white energy node
 
         for (int y = 0; y < height; y++)
         {
@@ -708,71 +712,76 @@ public class WonderObjectJuice : MonoBehaviour
             {
                 bool isLeftFrame = (x < 6);
                 bool isRightFrame = (x >= width - 6);
-                bool isTopFrame = (y >= height - 6);
-                bool isBottomFrame = (y < 6);
+                bool isTopFrame = (y >= height - 8);
+                bool isBottomFrame = (y < 8);
                 bool isFrame = isLeftFrame || isRightFrame || isTopFrame || isBottomFrame;
 
                 bool isInner = !isFrame;
 
+                // Glowing energy nozzles/nodes inside the frame
                 bool isEnergyNode = false;
                 if (isFrame)
                 {
-                    if ((x >= 2 && x < width - 2) && (y % 50 == 25))
+                    if ((x >= 2 && x < width - 2) && (y % 40 == 20))
                     {
                         isEnergyNode = true;
                     }
                 }
 
-                bool inVerticalGlow = false;
+                // GLOWING NEON ENERGY LATTICE
+                bool isLatticeLine = false;
+                bool isLatticeNode = false;
                 if (isInner)
                 {
-                    float relativeX = (float)(x - 6) / (width - 12);
-                    if (Mathf.Abs(relativeX - 0.5f) < 0.04f)
+                    int latticeSpacing = 16;
+                    int thickness = 2;
+
+                    // Calculate grid line intersections
+                    int dist1 = (x - y) % latticeSpacing;
+                    int dist2 = (x + y) % latticeSpacing;
+
+                    // Handle wrapping coordinates for modular arithmetic in negative domains safely
+                    if (dist1 < 0) dist1 += latticeSpacing;
+                    if (dist2 < 0) dist2 += latticeSpacing;
+
+                    bool line1 = dist1 < thickness || dist1 > latticeSpacing - thickness;
+                    bool line2 = dist2 < thickness || dist2 > latticeSpacing - thickness;
+
+                    isLatticeLine = line1 || line2;
+
+                    // Spawn circular nodes at the crossings of the energy diagonal lines
+                    if (line1 && line2)
                     {
-                        inVerticalGlow = true;
+                        isLatticeNode = true;
                     }
                 }
 
-                bool isEnergyWave = false;
-                if (isInner)
-                {
-                    float wave1 = Mathf.Sin((float)y * 0.15f);
-                    float wave2 = Mathf.Cos((float)y * 0.1f);
-                    if (Mathf.Abs((x - width * 0.5f) - wave1 * 6f) < 1.5f ||
-                        Mathf.Abs((x - width * 0.5f) - wave2 * 4f) < 1.5f)
-                    {
-                        isEnergyWave = true;
-                    }
-                }
-
+                // Paint logic
                 if (isEnergyNode)
                 {
-                    wonderTex.SetPixel(x, y, energyCore);
+                    wonderTex.SetPixel(x, y, energyNodeCore);
                 }
-                else if (inVerticalGlow)
+                else if (isLatticeNode)
                 {
-                    wonderTex.SetPixel(x, y, Color.Lerp(energyCore, energyCyan, 0.3f));
+                    wonderTex.SetPixel(x, y, energyNodeCore);
                 }
-                else if (isEnergyWave)
+                else if (isLatticeLine)
                 {
-                    wonderTex.SetPixel(x, y, new Color(0.1f, 0.9f, 1f, 0.85f));
+                    wonderTex.SetPixel(x, y, energyCyan);
                 }
                 else if (isInner)
                 {
-                    float scanline = Mathf.Sin((float)y * 0.8f) * 0.15f + 0.35f;
-                    if (y % 8 == 0 || x % 8 == 0)
-                    {
-                        wonderTex.SetPixel(x, y, new Color(0f, 0.8f, 1.0f, scanline + 0.15f));
-                    }
-                    else
-                    {
-                        wonderTex.SetPixel(x, y, new Color(0f, 0.6f, 0.8f, scanline * 0.5f));
-                    }
+                    // Shimmering horizontal wave phase scanlines
+                    float scanline = Mathf.Sin((float)y * 0.9f) * 0.18f + 0.32f;
+                    
+                    // Transparent phase-shield energy field
+                    wonderTex.SetPixel(x, y, new Color(energyCyanSoft.r, energyCyanSoft.g, energyCyanSoft.b, scanline * 0.45f));
                 }
                 else
                 {
-                    float framePulse = Mathf.Sin((float)y * 0.05f) * 0.2f + 0.8f;
-                    wonderTex.SetPixel(x, y, Color.Lerp(cyberBorder, cyberGlow, framePulse));
+                    // Holographic border pulsing slightly with vertical index coordinates
+                    float borderPulse = Mathf.Sin((float)y * 0.08f) * 0.25f + 0.75f;
+                    wonderTex.SetPixel(x, y, Color.Lerp(cyberBorder, energyCyan, borderPulse * 0.35f));
                 }
             }
         }

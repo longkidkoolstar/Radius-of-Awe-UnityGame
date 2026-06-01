@@ -105,6 +105,17 @@ public class WonderRadiusController : MonoBehaviour
     }
 
     /// <summary>
+    /// Static helper: returns true if a given collider overlaps the active Wonder Zone.
+    /// </summary>
+    public static bool IsInsideWonderZone(Collider2D collider)
+    {
+        if (instance == null || !instance.isActive || collider == null) return false;
+        Vector2 closestPoint = collider.ClosestPoint(instance.currentCenter);
+        float dist = Vector2.Distance(closestPoint, instance.currentCenter);
+        return dist <= instance.currentRadius;
+    }
+
+    /// <summary>
     /// Static helper: returns the normalized distance (0 at center, 1 at edge) of a
     /// world position relative to the Wonder Zone. Returns float.MaxValue if zone is inactive.
     /// </summary>
