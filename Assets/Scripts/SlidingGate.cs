@@ -18,6 +18,9 @@ public class SlidingGate : MonoBehaviour
     private bool isOpening = false;
     private ElasticWobble gateWobbler;
 
+    /// <summary>Returns true if the gate has started opening or is fully open.</summary>
+    public bool IsOpen => isOpening;
+
     private void Start()
     {
         // Auto-detect or attach ElasticWobble to this gate

@@ -306,7 +306,7 @@ MonoBehaviour:
   rotationSpeed: 65
   maxWarpRadius: 120
   warpExpansionSpeed: 65
-  nextSceneName: Level01
+  nextSceneName: Level3
 --- !u!212 &255257932
 SpriteRenderer:
   m_ObjectHideFlags: 0

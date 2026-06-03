@@ -13,6 +13,7 @@ using System.Collections.Generic;
 public class KeyFallDetectorManager : MonoBehaviour
 {
     private List<Rigidbody2D> keyRigidbodies = new List<Rigidbody2D>();
+    private Dictionary<Rigidbody2D, SlidingGate> keyToGateMap = new Dictionary<Rigidbody2D, SlidingGate>();
     private bool isKeyLost = false;
     private bool isGamepadMode = false;
 
@@ -43,6 +44,62 @@ public class KeyFallDetectorManager : MonoBehaviour
         FindKeyObjects();
         // Match the initial gamepad state with the TutorialPromptCard if available
         isGamepadMode = TutorialPromptCard.IsGamepadMode;
+
+        AssociateKeysWithGates();
+    }
+
+    private void AssociateKeysWithGates()
+    {
+        keyToGateMap.Clear();
+        var buttons = FindObjectsOfType<CeilingButton>();
+        if (buttons.Length == 0) return;
+
+        foreach (var rb in keyRigidbodies)
+        {
+            if (rb == null) continue;
+
+            // Find closest button on the X-axis
+            CeilingButton closestButton = null;
+            float minDistance = float.MaxValue;
+            foreach (var btn in buttons)
+            {
+                float dist = Mathf.Abs(rb.transform.position.x - btn.transform.position.x);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    closestButton = btn;
+                }
+            }
+
+            if (closestButton != null)
+            {
+                // Find associated sliding gate via button onPressed event target
+                SlidingGate gate = null;
+                var onPressed = closestButton.OnPressed;
+                int count = onPressed.GetPersistentEventCount();
+                for (int i = 0; i < count; i++)
+                {
+                    var target = onPressed.GetPersistentTarget(i);
+                    if (target != null)
+                    {
+                        if (target is GameObject go)
+                        {
+                            gate = go.GetComponent<SlidingGate>();
+                        }
+                        else if (target is Component comp)
+                        {
+                            gate = comp.GetComponent<SlidingGate>();
+                        }
+                    }
+                    if (gate != null) break;
+                }
+
+                if (gate != null)
+                {
+                    keyToGateMap[rb] = gate;
+                }
+            }
+        }
     }
 
     private void FindKeyObjects()
@@ -75,7 +132,12 @@ public class KeyFallDetectorManager : MonoBehaviour
 
             if (rb.transform.position.y < -7f)
             {
-                anyKeyBelowLimit = true;
+                // If the gate associated with this key is already open, we don't trigger "anyKeyBelowLimit"
+                bool isKeyDone = keyToGateMap.TryGetValue(rb, out var gate) && gate != null && gate.IsOpen;
+                if (!isKeyDone)
+                {
+                    anyKeyBelowLimit = true;
+                }
 
                 // Check if the key is inside the active Wonder Zone
                 bool inWonderZone = WonderRadiusController.IsInsideWonderZone(rb.transform.position);
