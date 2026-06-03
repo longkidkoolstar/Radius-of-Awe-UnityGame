@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using System.Collections.Generic;
 
 /// <summary>
 /// A ceiling pressure plate. Place it on the ceiling of a level.
@@ -44,6 +45,7 @@ public class CeilingButton : MonoBehaviour
     private int overlappingObjectsCount = 0;
     private bool isPressed = false;
     private ElasticWobble capWobbler;
+    private List<Collider2D> overlappingColliders = new List<Collider2D>();
 
     private Sprite baseSprite;
     private Sprite capSprite;
@@ -128,23 +130,40 @@ public class CeilingButton : MonoBehaviour
             Color targetColor = isPressed ? pressedColor : normalColor;
             capRenderer.color = Color.Lerp(capRenderer.color, targetColor, Time.deltaTime * transitionSpeed);
         }
+
+        // Clean up any null, disabled, or inactive colliders from the overlapping list
+        overlappingColliders.RemoveAll(c => c == null || !c.enabled || !c.gameObject.activeInHierarchy);
+
+        // Dynamically evaluate if any overlapping object satisfies the collision rules
+        bool shouldBePressed = false;
+        int activeOverlapCount = 0;
+        foreach (var col in overlappingColliders)
+        {
+            if (EvaluateCollision(col))
+            {
+                shouldBePressed = true;
+                activeOverlapCount++;
+            }
+        }
+        overlappingObjectsCount = activeOverlapCount;
+
+        EvaluateButtonState(shouldBePressed);
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (EvaluateCollision(collision))
+        if (collision.isTrigger) return;
+        if (!overlappingColliders.Contains(collision))
         {
-            overlappingObjectsCount++;
-            EvaluateButtonState();
+            overlappingColliders.Add(collision);
         }
     }
 
     private void OnTriggerExit2D(Collider2D collision)
     {
-        if (EvaluateCollision(collision))
+        if (overlappingColliders.Contains(collision))
         {
-            overlappingObjectsCount = Mathf.Max(0, overlappingObjectsCount - 1);
-            EvaluateButtonState();
+            overlappingColliders.Remove(collision);
         }
     }
 
@@ -153,7 +172,7 @@ public class CeilingButton : MonoBehaviour
     /// </summary>
     private bool EvaluateCollision(Collider2D collision)
     {
-        if (collision.isTrigger) return false;
+        if (collision == null || collision.isTrigger) return false;
 
         var wo = collision.GetComponent<WonderObject>();
         if (requireWonderObject && wo == null) return false;
@@ -163,10 +182,8 @@ public class CeilingButton : MonoBehaviour
         return true;
     }
 
-    private void EvaluateButtonState()
+    private void EvaluateButtonState(bool shouldBePressed)
     {
-        bool shouldBePressed = overlappingObjectsCount > 0;
-        
         if (shouldBePressed && !isPressed)
         {
             isPressed = true;
