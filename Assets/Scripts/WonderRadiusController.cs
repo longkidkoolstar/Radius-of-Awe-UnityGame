@@ -83,7 +83,7 @@ public class WonderRadiusController : MonoBehaviour
     private Camera mainCamera;
     private Vector3 currentCenter;
     private float currentRadius;
-    private bool isActive = true;
+    private bool isActive = false;
 
     /// <summary>Current world-space center of the Wonder Zone.</summary>
     public Vector3 Center => currentCenter;
@@ -133,7 +133,7 @@ public class WonderRadiusController : MonoBehaviour
         // Singleton setup (non-destructive — last spawned wins)
         instance = this;
         mainCamera = Camera.main;
-        currentRadius = radius;
+        currentRadius = isActive ? radius : 0f;
         virtualCursorPos = transform.position;
     }
 
