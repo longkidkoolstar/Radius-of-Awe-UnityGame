@@ -45,6 +45,17 @@ public class TutorialPromptCard : MonoBehaviour
 
     private void Start()
     {
+        // Dynamic overrides for Level 00 tutorial prompt to make it cleaner and objective-focused
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Level00")
+        {
+            if (instructionText.Contains("SCROLL") || instructionText.Contains("LIFT") || instructionText.Contains("RESIZE"))
+            {
+                instructionText = "Scroll to resize the radius.\n\nObjective: Bring the crate to the pressure plate.";
+                instructionTextGamepad = "LT / RT to resize the radius.\n\nObjective: Bring the crate to the pressure plate.";
+                cardSize = new Vector2(4.8f, 1.1f);
+            }
+        }
+
         // 1. Automatically populate Gamepad instructions if they are empty
         if (string.IsNullOrEmpty(instructionTextGamepad))
         {

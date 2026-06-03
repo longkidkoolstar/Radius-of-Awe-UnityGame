@@ -58,6 +58,7 @@ public class CeilingButton : MonoBehaviour
 
     private void Start()
     {
+        requireActiveWonderZoneState = false; // Disable Wonder Zone requirement so plates trigger on physical contact
         triggerCollider = GetComponent<BoxCollider2D>();
         triggerCollider.isTrigger = true;
 

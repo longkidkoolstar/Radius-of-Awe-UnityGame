@@ -171,6 +171,12 @@ MonoBehaviour:
   swirlSpeed: 85
   pulseAmount: 0.08
   pulseFrequency: 2.5
+  driftDuration: 5.2
+  floatSpeed: 1.4
+  rotationSpeed: 65
+  maxWarpRadius: 120
+  warpExpansionSpeed: 65
+  nextSceneName: 
 --- !u!212 &45497236
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -545,6 +551,9 @@ MonoBehaviour:
   feather: 0.5
   allowToggle: 1
   toggleKey: 101
+  controllerToggleKey: 332
+  controllerAimOffsetRange: 5
+  controllerAimSmoothSpeed: 10
 --- !u!114 &401388250
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -569,6 +578,7 @@ MonoBehaviour:
   jumpCutMultiplier: 0.4
   fallGravityMultiplier: 2.2
   maxFallSpeed: 25
+  controllerJumpKey: 330
   groundLayer:
     serializedVersion: 2
     m_Bits: 256
@@ -1788,7 +1798,7 @@ GameObject:
   - component: {fileID: 994320662}
   - component: {fileID: 994320661}
   - component: {fileID: 994320660}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Celestial_Stone_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2218,6 +2228,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   requireWonderObject: 1
   requireActiveWonderZoneState: 1
+  extraTriggerWidth: 0.4
+  extraTriggerHeightDown: 0.3
   movingCap: {fileID: 1926412207}
   pressDepth: 0.16
   transitionSpeed: 9
@@ -2301,7 +2313,7 @@ GameObject:
   - component: {fileID: 1136495408}
   - component: {fileID: 1136495407}
   - component: {fileID: 1136495406}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Hoverboard_Elevator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2530,7 +2542,7 @@ GameObject:
   - component: {fileID: 1180420240}
   - component: {fileID: 1180420239}
   - component: {fileID: 1180420238}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Celestial_Stone_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3113,7 +3125,7 @@ GameObject:
   - component: {fileID: 1673788400}
   - component: {fileID: 1673788399}
   - component: {fileID: 1673788398}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Celestial_Stone_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
