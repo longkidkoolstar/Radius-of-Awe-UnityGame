@@ -621,6 +621,16 @@ public class AudioManager : MonoBehaviour
     public static AudioSource PlayAtPoint(AudioClip clip, Vector3 position, float volume = 1f, float pitch = 1f, float spatialBlend = 1f)
     {
         if (clip == null || instance == null) return null;
+
+        // Guard: a NaN position passed to a spatialized AudioSource will set a non-finite
+        // value on the AudioListener's AudioParam and crash WebGL. Fall back to 2D.
+        bool positionIsValid = !float.IsNaN(position.x) && !float.IsNaN(position.y) && !float.IsNaN(position.z)
+                            && !float.IsInfinity(position.x) && !float.IsInfinity(position.y) && !float.IsInfinity(position.z);
+        if (!positionIsValid)
+        {
+            Debug.LogWarning("[AUDIO] PlayAtPoint: invalid position " + position + " for clip '" + clip.name + "'. Falling back to 2D.");
+            return Play(clip, volume, pitch);
+        }
         
         GameObject go = new GameObject("Temp3DSound_" + clip.name);
         go.transform.position = position;
@@ -642,9 +652,40 @@ public class AudioManager : MonoBehaviour
     /// <summary>
     /// Starts a looping spatialized sound at a world position.
     /// </summary>
+    /// <summary>
+    /// Starts a looping fully-2D (non-spatialized) sound. Use this instead of PlayLoopAtPoint
+    /// when the sound is a cinematic/UI effect that should not depend on listener position.
+    /// </summary>
+    public static AudioSource PlayLoop2D(AudioClip clip, float volume = 1f, float pitch = 1f)
+    {
+        if (clip == null || instance == null) return null;
+
+        GameObject go = new GameObject("Looping2DSound_" + clip.name);
+        go.transform.SetParent(instance.transform);
+
+        AudioSource source = go.AddComponent<AudioSource>();
+        source.clip = clip;
+        source.volume = volume;
+        source.pitch = pitch;
+        source.spatialBlend = 0f; // Fully 2D — safe from listener position NaN errors
+        source.loop = true;
+        source.Play();
+
+        return source;
+    }
+
     public static AudioSource PlayLoopAtPoint(AudioClip clip, Vector3 position, float volume = 1f, float pitch = 1f)
     {
         if (clip == null || instance == null) return null;
+
+        // Guard against NaN positions crashing the WebGL audio backend.
+        bool positionIsValid = !float.IsNaN(position.x) && !float.IsNaN(position.y) && !float.IsNaN(position.z)
+                            && !float.IsInfinity(position.x) && !float.IsInfinity(position.y) && !float.IsInfinity(position.z);
+        if (!positionIsValid)
+        {
+            Debug.LogWarning("[AUDIO] PlayLoopAtPoint: invalid position " + position + " for clip '" + clip.name + "'. Falling back to 2D loop.");
+            return PlayLoop2D(clip, volume, pitch);
+        }
         
         GameObject go = new GameObject("Looping3DSound_" + clip.name);
         go.transform.position = position;

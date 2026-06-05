@@ -207,9 +207,10 @@ public class VictoryPortalTrigger : MonoBehaviour
                 CameraController2D.Instance.TriggerShake(0.8f, 0.35f);
             }
 
-            // Play drift entry sound and start portal cosmic loop hum
+            // Play drift entry sound. Use 2D (non-spatialized) for the portal hum to avoid
+            // non-finite AudioParam errors if the AudioListener moves/disappears during transition.
             AudioManager.PlayDriftStart(transform.position);
-            portalHumSource = AudioManager.PlayLoopAtPoint(AudioManager.Instance.portalLoopClip, transform.position, 0.8f);
+            portalHumSource = AudioManager.PlayLoop2D(AudioManager.Instance.portalLoopClip, 0.8f);
 
             // 4. Begin the majestic drift coroutine
             StartCoroutine(DimensionalDriftRoutine(collision.transform));
@@ -304,8 +305,13 @@ public class VictoryPortalTrigger : MonoBehaviour
         Vector3 playerStartScale = playerTrans.localScale;
         float playerStartCamSize = Camera.main != null ? Camera.main.orthographicSize : 6.5f;
 
+        // Snapshot portal center NOW before any scene transition can invalidate this transform.
+        // Using transform.position inside the loop risks NaN if the object is destroyed/moved.
+        Vector3 portalCenter = transform.position;
+        if (!IsFiniteVector(portalCenter)) portalCenter = playerStartPos; // Fallback safety
+
         // Calculate initial spiral offset vector, distance, and angle relative to the rift center
-        Vector3 startOffset = playerStartPos - transform.position;
+        Vector3 startOffset = playerStartPos - portalCenter;
         float startDist = startOffset.magnitude;
         float startAngle = Mathf.Atan2(startOffset.y, startOffset.x);
 
@@ -325,12 +331,18 @@ public class VictoryPortalTrigger : MonoBehaviour
             // Orbit Angle: Spirals around the center 2.8 complete revolutions
             float currentAngle = startAngle + t * (Mathf.PI * 2f * 2.8f);
 
-            Vector3 whirlPos = transform.position + new Vector3(
+            // Use the snapshotted portalCenter — never read from transform.position mid-loop
+            Vector3 whirlPos = portalCenter + new Vector3(
                 Mathf.Cos(currentAngle) * currentDist,
                 Mathf.Sin(currentAngle) * currentDist,
                 playerStartPos.z
             );
-            playerTrans.position = whirlPos;
+
+            // Only apply if the computed position is numerically valid
+            if (IsFiniteVector(whirlPos))
+            {
+                playerTrans.position = whirlPos;
+            }
 
             // Fast self-spin on Z-axis as the player is whirled in
             playerTrans.Rotate(Vector3.forward, 520f * Time.unscaledDeltaTime);
@@ -508,6 +520,16 @@ public class VictoryPortalTrigger : MonoBehaviour
 
             yield return new WaitForSecondsRealtime(spawnInterval);
         }
+    }
+
+    /// <summary>
+    /// Returns true only if all vector components are finite (not NaN or Infinity).
+    /// Prevents invalid transform.position assignments that crash the WebGL audio backend.
+    /// </summary>
+    private static bool IsFiniteVector(Vector3 v)
+    {
+        return !float.IsNaN(v.x) && !float.IsNaN(v.y) && !float.IsNaN(v.z)
+            && !float.IsInfinity(v.x) && !float.IsInfinity(v.y) && !float.IsInfinity(v.z);
     }
 
     private void LoadNextScene()
