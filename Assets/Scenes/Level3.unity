@@ -4982,7 +4982,7 @@ MonoBehaviour:
   rotationSpeed: 65
   maxWarpRadius: 120
   warpExpansionSpeed: 65
-  nextSceneName: Level00
+  nextSceneName: Level4
 --- !u!61 &1738752555
 BoxCollider2D:
   m_ObjectHideFlags: 0

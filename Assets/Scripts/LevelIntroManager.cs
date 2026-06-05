@@ -176,6 +176,11 @@ public class LevelIntroManager : MonoBehaviour
             titleText.text = "L E V E L   T H R E E";
             subtitleText.text = "T h e   G r a v i t y   C a s c a d e";
         }
+        else if (sceneName == "Level4")
+        {
+            titleText.text = "L E V E L   F O U R";
+            subtitleText.text = "T h e   K i n e t i c   F r a c t u r e";
+        }
         else
         {
             titleText.text = sceneName.ToUpper();
