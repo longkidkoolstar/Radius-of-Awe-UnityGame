@@ -4343,8 +4343,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f9030cf1976a1c409515b4e05ddcc33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mundaneTrack: {fileID: 8300000, guid: 00d5c36c86a99934aacf810158a5737e, type: 3}
-  wonderousTrack: {fileID: 8300000, guid: 3b7b5e4534f26aa44b1e30ad97ed475c, type: 3}
+  mundaneTrack: {fileID: 8300000, guid: 10a169ae2b1aff14ea6fb373047c47fb, type: 3}
+  wonderousTrack: {fileID: 8300000, guid: 9c9eba1e4ba177e469b7e4a2bdb2a49c, type: 3}
   maxMundaneVolume: 0.25
   maxWonderousVolume: 0.25
   fadeSpeed: 1.8

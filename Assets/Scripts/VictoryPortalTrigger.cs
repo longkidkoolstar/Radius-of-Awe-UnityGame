@@ -523,6 +523,14 @@ public class VictoryPortalTrigger : MonoBehaviour
             int nextSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex + 1;
             if (nextSceneIndex < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings)
             {
+                // Unlock the next level
+                int currentUnlocked = PlayerPrefs.GetInt("UnlockedLevelIndex", 1);
+                if (nextSceneIndex > currentUnlocked)
+                {
+                    PlayerPrefs.SetInt("UnlockedLevelIndex", nextSceneIndex);
+                    PlayerPrefs.Save();
+                }
+
                 UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneIndex);
             }
             else
