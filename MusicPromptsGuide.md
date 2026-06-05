@@ -48,6 +48,34 @@ To keep the Mundane and Wonderous layers cohesive during transition crossfades, 
 
 ---
 
+## 🎹 Level 4: "The Kinetic Fracture"
+* **Musical Key:** F minor (fast, tense, kinetic)
+* **Tempo:** 120 BPM (energetic, driving)
+
+### 🌲 Level 4 - Mundane (Muted/Rhythmic)
+* **Style Tags (Genre):** `minimalist industrial ambient, rhythmic woodblock, low muffled percussion, ticking clocks, 120 bpm, key of f minor, loopable, tense, mechanical`
+* **Prompt Description:** `A tense and fast but quiet instrumental loop. A mechanical woodblock ticking rhythm over a deep, muffled industrial drum pulse. Minimalist, hollow, and suspenseful.`
+
+### ✨ Level 4 - Wonderous (Kinetic/Synthwave)
+* **Style Tags (Genre):** `fast synthwave, driving retro bassline, bright arpeggiated synths, neon pluck chords, 120 bpm, key of f minor, loopable, high-energy, cyber`
+* **Prompt Description:** `A fast and high-energy instrumental synthwave loop. Driving 16th-note retro bassline, sparkling neon arpeggios, and bright energetic synthesizer chords. Climactic, fast, and satisfying.`
+
+---
+
+## 🎹 Level 5: "The Quantum Threshold"
+* **Musical Key:** C minor (climactic, cosmic, mysterious)
+* **Tempo:** 135 BPM (fast, urgent, glitchy)
+
+### 🌲 Level 5 - Mundane (Glitchy/Unstable)
+* **Style Tags (Genre):** `minimalist glitch ambient, quiet modular synth clicks, dusty tape hiss, slow sparse rhodes chords, 135 bpm, key of c minor, loopable, mysterious, spacey`
+* **Prompt Description:** `A fast but very quiet, sparse instrumental loop. Ethereal, dusty Rhodes chords repeating slowly over a backdrop of quiet modular clicks, pops, and tape hiss. Glitchy, unstable, and mysterious.`
+
+### ✨ Level 5 - Wonderous (Quantum/Climactic)
+* **Style Tags (Genre):** `progressive synthwave, fast glitchy arpeggios, driving sub-bass, warm swelling pads, sparkling stellar synth leads, 135 bpm, key of c minor, loopable, climactic, cosmic`
+* **Prompt Description:** `A high-energy, climactic instrumental loop. Fast, complex, cascading synth arpeggios shifting through a spacey melody. Driving electronic bassline, warm cosmic pads, and sparkling neon glitch notes. Dreamy, fast, and satisfying.`
+
+---
+
 ## 💡 AI Music Generation Tips
 1. **Looping Optimization:** Always include `loopable` in the genre tags. AI-generated endings usually add silences or custom outros, so you will need to trim the final `.mp3` files in a free tool like Audacity (aligning trims to the beat grid) to get seamless looping.
 2. **Cohesiveness:** Keeping the musical key and BPM identical allows the game's `DynamicMusicPlayer` to cleanly sync and crossfade between the Mundane and Wonderous worlds in real-time.
