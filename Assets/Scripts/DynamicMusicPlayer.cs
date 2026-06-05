@@ -19,6 +19,29 @@ public class DynamicMusicPlayer : MonoBehaviour
     private AudioSource mundaneSource;
     private AudioSource wonderousSource;
 
+    private static DynamicMusicPlayer instance;
+
+    private void Awake()
+    {
+        if (instance != null)
+        {
+            // If the clips match, reload of same level occurred. Keep old playing, destroy duplicate.
+            if (instance.mundaneTrack == this.mundaneTrack && instance.wonderousTrack == this.wonderousTrack)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            else
+            {
+                // Different level, destroy old player so the new one can take over.
+                Destroy(instance.gameObject);
+            }
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
     private void Start()
     {
         // 1. Set up Mundane Audio Source
