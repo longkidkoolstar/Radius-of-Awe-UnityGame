@@ -11,8 +11,8 @@ public class DynamicMusicPlayer : MonoBehaviour
     [SerializeField] private AudioClip wonderousTrack;
 
     [Header("Volume Settings")]
-    [Range(0f, 1f)] [SerializeField] private float maxMundaneVolume = 0.25f;
-    [Range(0f, 1f)] [SerializeField] private float maxWonderousVolume = 0.25f;
+    [Range(0f, 1f)] [SerializeField] private float maxMundaneVolume = 0.15f;
+    [Range(0f, 1f)] [SerializeField] private float maxWonderousVolume = 0.15f;
     [Tooltip("How fast the music crossfades between worlds.")]
     [SerializeField] private float fadeSpeed = 1.8f;
 

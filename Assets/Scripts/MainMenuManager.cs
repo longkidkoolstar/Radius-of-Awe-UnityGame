@@ -282,6 +282,7 @@ public class MainMenuManager : MonoBehaviour
     private IEnumerator FadeBetweenContainers(GameObject fromContainer, GameObject toContainer)
     {
         isTransitioning = true;
+        if (AudioManager.Instance != null) AudioManager.PlayMenuWhoosh();
         CanvasGroup fromGroup = GetOrAddComponent<CanvasGroup>(fromContainer);
         CanvasGroup toGroup = GetOrAddComponent<CanvasGroup>(toContainer);
 

@@ -183,6 +183,11 @@ public class GravityWell : MonoBehaviour
         if (rb != null && !rigidbodiesInRange.Contains(rb))
         {
             rigidbodiesInRange.Add(rb);
+            // Play entry sound only when the well is active in wonder
+            if (isActiveInWonder)
+            {
+                AudioManager.PlayGravityWellEntry(transform.position);
+            }
         }
     }
 

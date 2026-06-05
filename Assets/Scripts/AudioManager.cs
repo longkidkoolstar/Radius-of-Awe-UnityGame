@@ -32,6 +32,9 @@ public class AudioManager : MonoBehaviour
     public AudioClip sporeWhooshClip { get; private set; }
     public AudioClip victoryChimeClip { get; private set; }
     public AudioClip wonderObjectEnterClip { get; private set; }
+    public AudioClip wallSlideClip { get; private set; }
+    public AudioClip gravityWellEntryClip { get; private set; }
+    public AudioClip menuWhooshClip { get; private set; }
 
     /// <summary>
     /// Automatically instantiates the AudioManager before any scene is loaded.
@@ -97,8 +100,14 @@ public class AudioManager : MonoBehaviour
         victoryChimeClip = CreateClip("VictoryChime", GenerateVictorySamples());
         // 15. Wonder Object Enter
         wonderObjectEnterClip = CreateClip("WonderObjectEnter", GenerateWonderObjectEnterSamples());
+        // 16. Wall Slide Scrape
+        wallSlideClip = CreateClip("WallSlide", GenerateWallSlideSamples());
+        // 17. Gravity Well Entry
+        gravityWellEntryClip = CreateClip("GravityWellEntry", GenerateGravityWellEntrySamples());
+        // 18. Menu Whoosh Transition
+        menuWhooshClip = CreateClip("MenuWhoosh", GenerateMenuWhooshSamples());
 
-        Debug.Log("<b><color=#00ccff>[AUDIO]</color></b>: All 15 procedural audio clips synthesized successfully!");
+        Debug.Log("<b><color=#00ccff>[AUDIO]</color></b>: All 18 procedural audio clips synthesized successfully!");
     }
 
     private AudioClip CreateClip(string name, float[] samples)
@@ -503,6 +512,86 @@ public class AudioManager : MonoBehaviour
         return samples;
     }
 
+    private float[] GenerateWallSlideSamples()
+    {
+        float duration = 1.0f;
+        int sampleCount = (int)(SAMPLERATE * duration);
+        float[] samples = new float[sampleCount];
+        float noiseVal = 0f;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / SAMPLERATE;
+
+            // Low growl base — surface friction rumble
+            float phase1 = 2f * Mathf.PI * 80f * t;
+            float phase2 = 2f * Mathf.PI * 155f * t;
+            float rumble = Mathf.Sin(phase1) * 0.45f + Mathf.Sin(phase2) * 0.3f;
+
+            // Scrapy band-passed noise
+            float raw = UnityEngine.Random.Range(-1f, 1f);
+            noiseVal = noiseVal * 0.88f + raw * 0.12f;
+
+            float wave = rumble * 0.4f + noiseVal * 0.6f;
+            // Slight volume pulse to simulate stick-slip friction
+            float stickSlip = Mathf.Abs(Mathf.Sin(2f * Mathf.PI * 14f * t)) * 0.35f + 0.65f;
+            samples[i] = wave * stickSlip * 0.13f;
+        }
+        return samples;
+    }
+
+    private float[] GenerateGravityWellEntrySamples()
+    {
+        float duration = 0.65f;
+        int sampleCount = (int)(SAMPLERATE * duration);
+        float[] samples = new float[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / SAMPLERATE;
+            float progress = t / duration;
+
+            // Rapid downward pitch swirl (gravitational pull feel)
+            float freq = Mathf.Lerp(900f, 120f, progress * progress);
+            float phase = 2f * Mathf.PI * freq * t;
+
+            // Spiral dissonant dual voice
+            float wave = Mathf.Sin(phase) * 0.6f + Mathf.Sin(phase * 1.33f) * 0.35f + Mathf.Sin(phase * 1.75f) * 0.05f;
+
+            // Swell then decay envelope
+            float env;
+            if (progress < 0.12f) env = progress / 0.12f;
+            else env = Mathf.Exp(-(progress - 0.12f) * 4.0f);
+
+            samples[i] = wave * env * 0.32f;
+        }
+        return samples;
+    }
+
+    private float[] GenerateMenuWhooshSamples()
+    {
+        float duration = 0.5f;
+        int sampleCount = (int)(SAMPLERATE * duration);
+        float[] samples = new float[sampleCount];
+        float lastFilter = 0f;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = (float)i / SAMPLERATE;
+            float progress = t / duration;
+
+            // High-pass filtered noise (classic UI swoosh)
+            float rawNoise = UnityEngine.Random.Range(-1f, 1f);
+            float hpNoise = rawNoise - lastFilter;
+            lastFilter = rawNoise * 0.5f;
+
+            // Thin tone glide underneath for musicality
+            float freq = Mathf.Lerp(400f, 1800f, progress * progress);
+            float tone = Mathf.Sin(2f * Mathf.PI * freq * t) * 0.2f;
+
+            float env = Mathf.Sin(progress * Mathf.PI);
+            samples[i] = (hpNoise * 0.8f + tone) * env * 0.22f;
+        }
+        return samples;
+    }
+
     // ==========================================
     // AUDIO COMPONENT PLAYBACK HANDLERS
     // ==========================================
@@ -612,7 +701,7 @@ public class AudioManager : MonoBehaviour
 
     public static void PlayJump()
     {
-        if (instance != null) Play(instance.jumpClip, 0.7f, UnityEngine.Random.Range(0.95f, 1.05f));
+        if (instance != null) Play(instance.jumpClip, 0.9f, UnityEngine.Random.Range(0.95f, 1.05f));
     }
 
     public static void PlayLand(float fallVelocity)
@@ -620,7 +709,7 @@ public class AudioManager : MonoBehaviour
         if (instance == null) return;
         
         // Dynamically scale pitch and volume by severity of physical impact
-        float volume = Mathf.Clamp(fallVelocity * 0.05f, 0.2f, 1.0f);
+        float volume = Mathf.Clamp(fallVelocity * 0.065f, 0.28f, 1.0f);
         float pitch = Mathf.Clamp(1.05f - fallVelocity * 0.015f, 0.7f, 1.1f); // harder fall is deeper
         
         Play(instance.landClip, volume, pitch);
@@ -631,7 +720,7 @@ public class AudioManager : MonoBehaviour
         if (instance == null) return;
         
         // Slightly quieter/louder and higher/lower pitch based on current horizontal velocity ratio
-        float volume = Mathf.Lerp(0.08f, 0.28f, runRatio);
+        float volume = Mathf.Lerp(0.12f, 0.38f, runRatio);
         float pitch = Mathf.Lerp(0.92f, 1.08f, runRatio);
         
         Play(instance.footstepClip, volume, pitch);
@@ -639,45 +728,44 @@ public class AudioManager : MonoBehaviour
 
     public static void PlayWonderToggleOn()
     {
-        if (instance != null) Play(instance.toggleOnClip, 0.85f);
+        if (instance != null) Play(instance.toggleOnClip, 1.0f);
     }
 
     public static void PlayWonderToggleOff()
     {
-        if (instance != null) Play(instance.toggleOffClip, 0.85f);
+        if (instance != null) Play(instance.toggleOffClip, 1.0f);
     }
 
     public static void PlayButtonPress(Vector3 pos)
     {
-        if (instance != null) PlayAtPoint(instance.buttonPressClip, pos, 0.9f, UnityEngine.Random.Range(0.96f, 1.04f));
+        if (instance != null) PlayAtPoint(instance.buttonPressClip, pos, 1.1f, UnityEngine.Random.Range(0.96f, 1.04f));
     }
 
     public static void PlayButtonRelease(Vector3 pos)
     {
-        if (instance != null) PlayAtPoint(instance.buttonReleaseClip, pos, 0.8f, UnityEngine.Random.Range(0.96f, 1.04f));
+        if (instance != null) PlayAtPoint(instance.buttonReleaseClip, pos, 1.0f, UnityEngine.Random.Range(0.96f, 1.04f));
     }
 
     public static void PlayGateLock(Vector3 pos)
     {
-        if (instance != null) PlayAtPoint(instance.gateLockClip, pos, 1.0f);
+        if (instance != null) PlayAtPoint(instance.gateLockClip, pos, 1.2f);
     }
 
     public static void PlayWonderObjectEnter(Vector3 pos)
     {
-        if (instance != null) PlayAtPoint(instance.wonderObjectEnterClip, pos, 0.75f, UnityEngine.Random.Range(0.95f, 1.05f));
+        if (instance != null) PlayAtPoint(instance.wonderObjectEnterClip, pos, 1.0f, UnityEngine.Random.Range(0.95f, 1.05f));
     }
 
     public static void PlayDriftStart(Vector3 pos)
     {
-        if (instance != null) PlayAtPoint(instance.driftStartClip, pos, 0.9f);
+        if (instance != null) PlayAtPoint(instance.driftStartClip, pos, 1.1f);
     }
 
     public static void PlaySporeWhoosh(Vector3 pos)
     {
         if (instance != null)
         {
-            // Set panning: map position relative to camera viewport
-            float volume = UnityEngine.Random.Range(0.45f, 0.75f);
+            float volume = UnityEngine.Random.Range(0.6f, 0.95f);
             float pitch = UnityEngine.Random.Range(0.85f, 1.15f);
             PlayAtPoint(instance.sporeWhooshClip, pos, volume, pitch);
         }
@@ -685,6 +773,31 @@ public class AudioManager : MonoBehaviour
 
     public static void PlayVictoryChime()
     {
-        if (instance != null) Play(instance.victoryChimeClip, 0.9f);
+        if (instance != null) Play(instance.victoryChimeClip, 1.1f);
+    }
+
+    /// <summary>
+    /// Plays a loopable wall-slide scrape at a world position. Stop with StopLoop().
+    /// </summary>
+    public static AudioSource PlayWallSlide(Vector3 pos)
+    {
+        if (instance == null) return null;
+        return PlayLoopAtPoint(instance.wallSlideClip, pos, 0.65f);
+    }
+
+    /// <summary>
+    /// Plays a punchy gravity-well entry impact (non-looping one-shot).
+    /// </summary>
+    public static void PlayGravityWellEntry(Vector3 pos)
+    {
+        if (instance != null) PlayAtPoint(instance.gravityWellEntryClip, pos, 1.1f, UnityEngine.Random.Range(0.92f, 1.08f));
+    }
+
+    /// <summary>
+    /// Plays a quick UI menu swoosh (2D, non-spatialized).
+    /// </summary>
+    public static void PlayMenuWhoosh()
+    {
+        if (instance != null) Play(instance.menuWhooshClip, 0.85f, UnityEngine.Random.Range(0.9f, 1.1f));
     }
 }
